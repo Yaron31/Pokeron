@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pokéron — Rouge Feu</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Écran intro + titre — démarre immédiatement -->
+  <div id="press-start-screen" class="screen active">
+    <!-- Fond noir + braises -->
+    <div class="intro-bg" id="intro-embers"></div>
+
+    <!-- Logo Pokémon style authentique — EN HAUT -->
+    <div class="title-container intro-title">
+      <h1 class="title">POKÉRON</h1>
+      <h2 class="subtitle" data-i18n="subtitle">Rouge Feu</h2>
+    </div>
+
+    <!-- Particules scintillantes -->
+    <div class="sparkles" id="sparkles">
+      <div class="sparkle s1"></div>
+      <div class="sparkle s2"></div>
+      <div class="sparkle s3"></div>
+      <div class="sparkle s4"></div>
+      <div class="sparkle s5"></div>
+      <div class="sparkle s6"></div>
+      <div class="sparkle s7"></div>
+      <div class="sparkle s8"></div>
+    </div>
+
+    <!-- Sprite Dracaufeu — AU CENTRE -->
+    <div class="sprite-container intro-sprite">
+      <img id="charizard-sprite" class="sprite" src="assets/images/my-charizard-pixel-art-v0-yiq8er3t0bm91.webp" alt="Dracaufeu">
+    </div>
+
+    <!-- Effet de rugissement (flash + secousse via JS) -->
+    <div class="roar-flash" id="roar-flash"></div>
+
+    <!-- Press START — EN BAS -->
+    <p class="press-start intro-press-start" data-i18n="pressStart">Appuie sur START...</p>
+
+    <!-- Hint visible avant le premier clic -->
+    <p class="waiting-hint" id="waiting-hint" data-i18n="waitingHint">Clique n'importe ou...</p>
+  </div>
+
+  <!-- Menu principal -->
+  <div id="menu-screen" class="screen">
+    <!-- Fond noir + braises -->
+    <div class="intro-bg" id="menu-embers"></div>
+    <div class="menu-box">
+      <ul id="menu-list">
+        <li class="menu-item selected" data-index="0">
+          <span class="cursor">►</span> <span data-i18n="newGame">NOUVELLE PARTIE</span> <span class="cursor-right">◄</span>
+        </li>
+        <li class="menu-item" data-index="1">
+          <span class="cursor"> </span> <span data-i18n="continue">CONTINUER</span> <span class="cursor-right"> </span>
+          <br><span class="disabled-tag" data-i18n="noSave">(pas de sauvegarde)</span>
+        </li>
+        <li class="menu-item" data-index="2">
+          <span class="cursor"> </span> <span data-i18n="options">OPTIONS</span> <span class="cursor-right"> </span>
+        </li>
+      </ul>
+      <ul id="options-list" style="display:none">
+        <li class="menu-item opt-item selected" data-opt="musicVol">
+          <span class="cursor">►</span> <span class="opt-label" data-i18n="musicVol">MUSIQUE</span> <span class="opt-value"></span> <span class="cursor-right">◄</span>
+        </li>
+        <li class="menu-item opt-item" data-opt="sfxVol">
+          <span class="cursor"> </span> <span class="opt-label" data-i18n="sfxVol">EFFETS</span> <span class="opt-value"></span> <span class="cursor-right"> </span>
+        </li>
+        <li class="menu-item opt-item" data-opt="lang">
+          <span class="cursor"> </span> <span class="opt-label" data-i18n="lang">LANGUE</span> <span class="opt-value"></span> <span class="cursor-right"> </span>
+        </li>
+        <li class="menu-item opt-item" data-opt="back">
+          <span class="cursor"> </span> <span data-i18n="back">RETOUR</span> <span class="cursor-right"> </span>
+        </li>
+      </ul>
+    </div>
+    <p class="menu-hint" data-i18n="menuHint">↑↓ Naviguer   ENTRÉE Sélectionner   ÉCHAP Retour</p>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
