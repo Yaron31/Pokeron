@@ -78,7 +78,8 @@ let gameState = {
 };
 
 // --- Réglages ---
-const defaultSettings = { musicVol: 5, sfxVol: 7, lang: "fr" };
+const defaultSettings = { musicVol: 5, sfxVol: 7, lang: "fr", textSpeed: 2 };
+const TEXT_SPEED_MS = { 1: 55, 2: 30, 3: 10 };
 let settings = loadSettings();
 
 function loadSettings() {
@@ -175,6 +176,10 @@ const translations = {
     musicVol: "MUSIQUE",
     sfxVol: "EFFETS",
     lang: "LANGUE",
+    textSpeed: "TEXTE",
+    textSpeedSlow: "LENT",
+    textSpeedNormal: "NORMAL",
+    textSpeedFast: "RAPIDE",
     back: "RETOUR",
     pressStart: "Appuie sur START...",
     waitingHint: "Clique n'importe ou...",
@@ -230,6 +235,10 @@ const translations = {
     musicVol: "MUSIC",
     sfxVol: "SFX",
     lang: "LANGUAGE",
+    textSpeed: "TEXT",
+    textSpeedSlow: "SLOW",
+    textSpeedNormal: "NORMAL",
+    textSpeedFast: "FAST",
     back: "BACK",
     pressStart: "Press START...",
     waitingHint: "Click anywhere...",
@@ -958,6 +967,8 @@ function adjustOption(direction) {
     settings.musicVol = Math.max(0, Math.min(10, settings.musicVol + direction));
   } else if (opt === "sfxVol") {
     settings.sfxVol = Math.max(0, Math.min(10, settings.sfxVol + direction));
+  } else if (opt === "textSpeed") {
+    settings.textSpeed = Math.max(1, Math.min(3, settings.textSpeed + direction));
   } else if (opt === "lang") {
     settings.lang = settings.lang === "fr" ? "en" : "fr";
     applyLanguage();
@@ -992,6 +1003,9 @@ function updateOptionsDisplay() {
       valueEl.textContent = buildVolumeBar(settings.musicVol);
     } else if (opt === "sfxVol") {
       valueEl.textContent = buildVolumeBar(settings.sfxVol);
+    } else if (opt === "textSpeed") {
+      const labels = { 1: t("textSpeedSlow"), 2: t("textSpeedNormal"), 3: t("textSpeedFast") };
+      valueEl.textContent = "◄ " + labels[settings.textSpeed] + " ►";
     } else if (opt === "lang") {
       valueEl.textContent = settings.lang === "fr" ? "FR" : "EN";
     }
@@ -1422,7 +1436,7 @@ function showMessage(text) {
         typewriterDone = true;
         resolve();
       }
-    }, 30);
+    }, TEXT_SPEED_MS[settings.textSpeed] || 30);
 
     // Permet de skip le typewriter en cliquant
     messageResolve = () => {
@@ -1484,9 +1498,9 @@ function updateHpBar(who, pokemon) {
   const fill = document.getElementById(who + "-hp");
   fill.style.width = pct + "%";
 
-  if (pct > 50) fill.style.backgroundColor = "#4CAF50";
-  else if (pct > 20) fill.style.backgroundColor = "#FFC107";
-  else fill.style.backgroundColor = "#F44336";
+  if (pct > 50) fill.style.background = "linear-gradient(to bottom, #58D058, #30A830)";
+  else if (pct > 20) fill.style.background = "linear-gradient(to bottom, #F8D030, #E0A820)";
+  else fill.style.background = "linear-gradient(to bottom, #F85858, #D03030)";
 
   if (who === "player") {
     document.getElementById("player-hp-text").textContent =

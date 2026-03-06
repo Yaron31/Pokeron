@@ -72,6 +72,9 @@
         <li class="menu-item opt-item" data-opt="sfxVol">
           <span class="cursor"> </span> <span class="opt-label" data-i18n="sfxVol">EFFETS</span> <span class="opt-value"></span> <span class="cursor-right"> </span>
         </li>
+        <li class="menu-item opt-item" data-opt="textSpeed">
+          <span class="cursor"> </span> <span class="opt-label" data-i18n="textSpeed">TEXTE</span> <span class="opt-value"></span> <span class="cursor-right"> </span>
+        </li>
         <li class="menu-item opt-item" data-opt="lang">
           <span class="cursor"> </span> <span class="opt-label" data-i18n="lang">LANGUE</span> <span class="opt-value"></span> <span class="cursor-right"> </span>
         </li>
@@ -96,22 +99,33 @@
   <div id="battle-screen" class="screen">
     <div class="battle-bg"></div>
     <div class="battle-field">
-      <div class="battle-pokemon enemy">
-        <div class="battle-info enemy-info">
-          <span class="battle-name" id="enemy-name"></span>
-          <span class="battle-level" id="enemy-level"></span>
+      <!-- Info ennemi : au-dessus du sprite ennemi (HAUT-DROITE) -->
+      <div class="battle-info enemy-info">
+        <span class="battle-name" id="enemy-name"></span>
+        <span class="battle-level" id="enemy-level"></span>
+        <div class="hp-bar-container">
+          <span class="hp-label">PV</span>
           <div class="hp-bar"><div class="hp-fill" id="enemy-hp"></div></div>
         </div>
-        <div class="pokemon-sprite enemy-sprite" id="enemy-sprite"></div>
       </div>
-      <div class="battle-pokemon player">
-        <div class="pokemon-sprite player-sprite" id="player-sprite"></div>
-        <div class="battle-info player-info">
-          <span class="battle-name" id="player-name"></span>
-          <span class="battle-level" id="player-level"></span>
+
+      <!-- Sprite ennemi : HAUT-DROITE -->
+      <div class="pokemon-sprite enemy-sprite" id="enemy-sprite"></div>
+      <img class="grass-platform enemy-platform" src="assets/images/grass_battlebase.png" alt="">
+
+      <!-- Sprite joueur : BAS-GAUCHE -->
+      <div class="pokemon-sprite player-sprite" id="player-sprite"></div>
+      <img class="grass-platform player-platform" src="assets/images/grass_battlebase.png" alt="">
+
+      <!-- Info joueur : au-dessus du sprite joueur (GAUCHE) -->
+      <div class="battle-info player-info">
+        <span class="battle-name" id="player-name"></span>
+        <span class="battle-level" id="player-level"></span>
+        <div class="hp-bar-container">
+          <span class="hp-label">PV</span>
           <div class="hp-bar"><div class="hp-fill" id="player-hp"></div></div>
-          <span class="hp-text" id="player-hp-text"></span>
         </div>
+        <span class="hp-text" id="player-hp-text"></span>
       </div>
     </div>
     <div class="battle-textbox" id="battle-textbox">

@@ -589,24 +589,25 @@ body {
 .type-normal { background: #A8A878; color: #fff; }
 
 /* ==============================================
-   ÉCRAN DE COMBAT
+   ÉCRAN DE COMBAT — Style Pokémon Rouge Feu GBA
    ============================================== */
 #battle-screen {
   flex-direction: column;
   justify-content: flex-end;
 }
 
+/* --- Fond : ciel + herbe GBA --- */
 .battle-bg {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(to bottom, transparent 34%, #8ED060 34%, #8ED060 36%, transparent 36%),
     linear-gradient(to bottom,
-      #4090C8 0%,
-      #60B0E8 30%,
-      #78C850 36%,
-      #5CA038 55%,
-      #3A7020 100%
+      #58B8E8 0%,
+      #78D0F0 25%,
+      #90E0A0 33%,
+      #78C850 38%,
+      #60A838 55%,
+      #488828 100%
     );
   z-index: -1;
 }
@@ -614,52 +615,32 @@ body {
   content: "";
   position: absolute;
   left: 0; right: 0;
-  top: 35%;
-  height: 6px;
+  top: 33%;
+  height: 8px;
   background: repeating-linear-gradient(
     90deg,
-    #8ED060 0px, #8ED060 4px,
-    #6AB040 4px, #6AB040 8px
+    #90D860 0px, #90D860 6px,
+    #70B840 6px, #70B840 12px
   );
   image-rendering: pixelated;
 }
 
+/* --- Terrain de combat --- */
 .battle-field {
   flex: 1;
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 20px;
   position: relative;
+  overflow: hidden;
 }
 
-.battle-pokemon {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-}
-
-.battle-pokemon.enemy {
-  align-self: flex-end;
-}
-
-.battle-pokemon.player {
-  align-self: flex-start;
-  align-items: flex-start;
-  margin-top: auto;
-  flex-direction: column-reverse;
-}
-
+/* --- Sprites Pokémon --- */
 .pokemon-sprite {
-  width: 100px;
-  height: 100px;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
+  position: absolute;
   background: transparent;
+  z-index: 5;
 }
 
 .sprite-img {
@@ -670,85 +651,134 @@ body {
   display: block;
 }
 
-.pokemon-sprite::after {
-  content: "";
-  position: absolute;
-  bottom: -8px;
-  left: 10%;
-  width: 80%;
-  height: 8px;
-  background: rgba(0,0,0,0.2);
-  border-radius: 50%;
-}
-
 .enemy-sprite {
-  animation: float 3s ease-in-out infinite;
+  width: clamp(140px, 28vw, 220px);
+  height: clamp(140px, 28vw, 220px);
+  top: 18%;
+  right: 8%;
 }
 
+.player-sprite {
+  width: clamp(200px, 42vw, 340px);
+  height: clamp(200px, 42vw, 340px);
+  bottom: -18%;
+  left: -2%;
+}
+
+/* --- Plateformes d'herbe (image PNG) --- */
+.grass-platform {
+  position: absolute;
+  z-index: 4;
+  image-rendering: pixelated;
+  pointer-events: none;
+  height: auto;
+}
+.enemy-platform {
+  width: clamp(180px, 34vw, 280px);
+  top: 42%;
+  right: 2%;
+}
+.player-platform {
+  width: clamp(180px, 34vw, 280px);
+  bottom: -4%;
+  left: -2%;
+}
+
+/* --- Panneaux d'info GBA (crème + bordure) --- */
 .battle-info {
-  background: rgba(248, 248, 240, 0.95);
-  border: 3px solid #404040;
-  padding: 8px 12px;
-  min-width: 180px;
-  box-shadow: 2px 2px 0 rgba(0,0,0,0.2);
+  position: absolute;
+  background: #F8F0D0;
+  border: 3px solid #484848;
+  border-radius: 8px;
+  padding: 8px 14px 10px;
+  min-width: 210px;
+  box-shadow: 2px 3px 0 rgba(0,0,0,0.15);
+  z-index: 10;
+}
+
+.enemy-info {
+  top: 2%;
+  right: 2%;
+}
+
+.player-info {
+  bottom: 52%;
+  left: 2%;
 }
 
 .battle-name {
-  font-size: clamp(8px, 2vw, 12px);
-  color: #333;
+  font-size: clamp(9px, 2.2vw, 14px);
+  color: #383838;
   display: inline;
+  font-weight: bold;
 }
 
 .battle-level {
-  font-size: clamp(7px, 1.5vw, 10px);
-  color: #666;
+  font-size: clamp(8px, 1.8vw, 12px);
+  color: #585858;
   margin-left: 8px;
 }
 
+/* --- Barre PV style GBA --- */
+.hp-bar-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.hp-label {
+  font-size: clamp(6px, 1.2vw, 8px);
+  color: #F8A800;
+  font-weight: bold;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.2);
+}
+
 .hp-bar {
-  width: 100%;
-  height: 8px;
-  background: #444;
-  margin-top: 6px;
-  border: 1px solid #333;
-  position: relative;
+  flex: 1;
+  height: 6px;
+  background: #383838;
+  border-radius: 3px;
+  border: 1px solid #282828;
+  overflow: hidden;
 }
 
 .hp-fill {
   height: 100%;
-  background: #4CAF50;
-  transition: width 0.5s ease, background-color 0.3s;
+  background: linear-gradient(to bottom, #58D058, #30A830);
+  border-radius: 2px;
+  transition: width 0.5s ease, background 0.3s;
   width: 100%;
 }
 
 .hp-text {
   font-size: clamp(7px, 1.2vw, 9px);
-  color: #555;
+  color: #484848;
   display: block;
   text-align: right;
   margin-top: 2px;
 }
 
-/* Textbox combat — style RPG GBA */
+/* --- Textbox combat — style GBA crème --- */
 .battle-textbox {
-  background: #111;
-  border: 3px solid #fff;
-  border-bottom: none;
-  padding: 16px 20px;
-  min-height: 60px;
-  width: 100%;
+  background: #F8F0D0;
+  border: 4px solid #484848;
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin: 0 6px 4px;
+  min-height: 56px;
   cursor: pointer;
   z-index: 10;
 }
 
 #battle-text {
-  font-size: clamp(9px, 2vw, 14px);
-  color: #fff;
+  font-size: clamp(9px, 2vw, 13px);
+  color: #383838;
   line-height: 1.6;
   min-height: 1.6em;
 }
 
-/* Boutons d'attaque */
+/* --- Boutons d'attaque --- */
 .battle-moves {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -766,6 +796,7 @@ body {
   font-size: clamp(8px, 1.8vw, 12px);
   padding: 14px 12px;
   border: 2px solid #333;
+  border-radius: 0;
   cursor: pointer;
   color: #fff;
   text-align: left;
@@ -794,7 +825,7 @@ body {
 .move-btn.type-plante { background: #4E8234; }
 .move-btn.type-normal { background: #6D6D4E; }
 
-/* Animations combat */
+/* --- Animations combat --- */
 @keyframes damageShake {
   0%, 100% { transform: translateX(0); }
   20% { transform: translateX(-6px); }
@@ -940,13 +971,9 @@ body {
     width: 120px;
     height: 120px;
   }
-  .pokemon-sprite {
-    width: 70px;
-    height: 70px;
-  }
   .battle-info {
-    min-width: 140px;
-    padding: 6px 8px;
+    min-width: 120px;
+    padding: 5px 8px;
   }
   .result-box {
     width: 90vw;
