@@ -59,9 +59,10 @@ body {
 }
 
 
-/* Écran menu : tout centré (comme avant) */
+/* Écran menu : titre + box empilés au centre */
 #menu-screen {
   justify-content: center;
+  gap: 30px;
 }
 
 .screen.active {
@@ -353,7 +354,7 @@ body {
 
 .menu-item {
   font-size: clamp(10px, 2.2vw, 16px);
-  color: #d4b896;
+  color: #fff;
   padding: 12px 8px;
   cursor: pointer;
   transition: color 0.15s;
@@ -1008,12 +1009,14 @@ body {
 
 .pause-title {
   font-family: "Press Start 2P", monospace;
-  font-size: 14px;
-  color: #cf4014;
+  font-size: 16px;
+  color: #ffffff;
   text-align: center;
   margin: 0 0 12px;
   padding-bottom: 10px;
   border-bottom: 2px solid #cf4014;
+  letter-spacing: 4px;
+  text-shadow: 0 0 8px rgba(207, 64, 20, 0.6), 0 2px 0 #cf4014;
 }
 
 #pause-list {
@@ -1048,7 +1051,7 @@ body {
 .quit-confirm p {
   font-family: "Press Start 2P", monospace;
   font-size: 11px;
-  color: #cf4014;
+  color: #ffffff;
   margin: 0 0 12px;
 }
 
@@ -1061,8 +1064,8 @@ body {
 .quit-btn {
   font-family: "Press Start 2P", monospace;
   font-size: 11px;
-  background: #E8D8B0;
-  color: #383838;
+  background: #00000000;
+  color: #ffffff;
   border: 2px solid #cf4014;
   border-radius: 6px;
   padding: 8px 20px;
@@ -1070,9 +1073,9 @@ body {
   transition: all 0.15s;
 }
 .quit-btn.selected {
-  color: #000;
+  color: #cf4014;
   border-color: #cf4014;
-  background: #D0C098;
+  background: #cfbf148a;
 }
 
 /* Options dans le pause menu */

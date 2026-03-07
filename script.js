@@ -135,7 +135,9 @@ function loadGame() {
         level: p.level,
         stats: p.stats,
         maxPv: p.maxPv,
-        currentPv: p.currentPv,
+        currentPv: p.maxPv,
+        spriteFront: template.spriteFront,
+        spriteBack: template.spriteBack,
         moves: p.moves,
         exp: p.exp
       },
@@ -745,6 +747,8 @@ function updateSelection() {
     }
     if (disabledIndexes.includes(index)) {
       item.classList.add("disabled");
+    } else {
+      item.classList.remove("disabled");
     }
   });
 }
