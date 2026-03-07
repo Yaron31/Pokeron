@@ -652,17 +652,17 @@ body {
 }
 
 .enemy-sprite {
-  width: clamp(140px, 28vw, 220px);
-  height: clamp(140px, 28vw, 220px);
-  top: 18%;
-  right: 8%;
+  width: 250px;
+  height: 250px;
+  top: 23%;
+  right: 11%;
 }
 
 .player-sprite {
   width: clamp(200px, 42vw, 340px);
   height: clamp(200px, 42vw, 340px);
   bottom: -18%;
-  left: -2%;
+  left: 7%;
 }
 
 /* --- Plateformes d'herbe (image PNG) --- */
@@ -674,23 +674,23 @@ body {
   height: auto;
 }
 .enemy-platform {
-  width: clamp(180px, 34vw, 280px);
-  top: 42%;
-  right: 2%;
+  width: 400px;
+  top: 55%;
+  right: 5%;
 }
 .player-platform {
-  width: clamp(180px, 34vw, 280px);
-  bottom: -4%;
-  left: -2%;
+  width: 450px;
+  bottom: -15%;
+  left: 6%;
 }
 
 /* --- Panneaux d'info GBA (crème + bordure) --- */
 .battle-info {
   position: absolute;
   background: #F8F0D0;
-  border: 3px solid #484848;
+  border: 3px solid #cf4014;
   border-radius: 8px;
-  padding: 8px 14px 10px;
+  padding: 15px 45px 10px;
   min-width: 210px;
   box-shadow: 2px 3px 0 rgba(0,0,0,0.15);
   z-index: 10;
@@ -702,8 +702,8 @@ body {
 }
 
 .player-info {
-  bottom: 52%;
-  left: 2%;
+  bottom: 60%;
+  left: 1%;
 }
 
 .battle-name {
@@ -761,21 +761,23 @@ body {
 
 /* --- Textbox combat — style GBA crème --- */
 .battle-textbox {
-  background: #F8F0D0;
-  border: 4px solid #484848;
-  border-radius: 8px;
-  padding: 14px 18px;
-  margin: 0 6px 4px;
-  min-height: 56px;
+  background: #303030;
+  border: 4px solid #cf4014;
+  border-radius: 9px;
+  padding: 20px 18px;
+  margin: 0;
+  width: 100%;
+  min-height: 80px;
   cursor: pointer;
   z-index: 10;
 }
 
 #battle-text {
   font-size: clamp(9px, 2vw, 13px);
-  color: #383838;
+  color: #ffffff;
   line-height: 1.6;
   min-height: 1.6em;
+  text-align: left;
 }
 
 /* --- Boutons d'attaque --- */
@@ -823,7 +825,7 @@ body {
 .move-btn.type-feu { background: #C03028; }
 .move-btn.type-eau { background: #4A6FBF; }
 .move-btn.type-plante { background: #4E8234; }
-.move-btn.type-normal { background: #6D6D4E; }
+.move-btn.type-normal { background: #777777; }
 
 /* --- Animations combat --- */
 @keyframes damageShake {

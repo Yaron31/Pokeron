@@ -1566,6 +1566,9 @@ async function playerChooseMove(moveIndex) {
   if (!gameState.battleActive) return;
   gameState.battleActive = false;
 
+  const movesDiv = document.getElementById("battle-moves");
+  movesDiv.classList.add("hidden");
+
   const playerMove = gameState.playerPokemon.moves[moveIndex];
   const aiMove = aiChooseMove(gameState.enemyPokemon, gameState.playerPokemon);
 
@@ -1583,7 +1586,6 @@ async function playerChooseMove(moveIndex) {
   // Premier attaquant
   await executeAttack(first);
   if (first.target.currentPv <= 0) {
-    await processMessages();
     await endBattle(first.target === e);
     return;
   }
@@ -1591,12 +1593,11 @@ async function playerChooseMove(moveIndex) {
   // Second attaquant
   await executeAttack(second);
   if (second.target.currentPv <= 0) {
-    await processMessages();
     await endBattle(second.target === e);
     return;
   }
 
-  await processMessages();
+  movesDiv.classList.remove("hidden");
   gameState.battleActive = true;
   document.getElementById("battle-text").textContent =
     t("whatWillDo", { name: pName(p) });
@@ -1609,9 +1610,12 @@ function delay(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
 async function executeAttack({ mon, move, target, isPlayer }) {
   move.currentPp = Math.max(0, move.currentPp - 1);
-  queueMessage(t("usesMove", { pokemon: pName(mon), move: moveName(move) }));
 
-  // Step 1 : Attaquant glisse vers l'avant
+  // Step 1 : Afficher message d'attaque et attendre clic
+  await showMessage(t("usesMove", { pokemon: pName(mon), move: moveName(move) }));
+  await waitForClick();
+
+  // Step 2 : Attaquant glisse vers l'avant
   const attackerEl = document.getElementById(isPlayer ? "player-sprite" : "enemy-sprite");
   const defenderEl = document.getElementById(isPlayer ? "enemy-sprite" : "player-sprite");
   const slideClass = isPlayer ? "attack-slide-right" : "attack-slide-left";
@@ -1621,29 +1625,31 @@ async function executeAttack({ mon, move, target, isPlayer }) {
   await delay(ATTACK_SLIDE_MS);
   attackerEl.classList.remove(slideClass);
 
-  // Step 2 : Calcul dégâts
+  // Step 3 : Calcul dégâts
   const { damage, multiplier } = calculateDamage(mon, target, move);
   target.currentPv = Math.max(0, target.currentPv - damage);
 
-  if (multiplier > 1) queueMessage(t("superEffective"));
-  else if (multiplier < 1) queueMessage(t("notEffective"));
-
-  queueMessage(t("loses", { name: pName(target), damage }));
-
-  // Step 3 : Défenseur flashe + tremble
+  // Step 4 : Défenseur flashe + tremble + barre PV
   defenderEl.classList.add("hit-flash", "damage-shake");
   playHitSound();
-
-  // Barre PV s'anime via CSS transition
   updateHpBar("player", gameState.playerPokemon);
   updateHpBar("enemy", gameState.enemyPokemon);
-
   await delay(HIT_ANIM_MS);
   defenderEl.classList.remove("hit-flash", "damage-shake");
 
-  // Step 4 : K.O. si nécessaire
+  // Step 5 : Efficacité (si applicable)
+  if (multiplier > 1) {
+    await showMessage(t("superEffective"));
+    await waitForClick();
+  } else if (multiplier < 1) {
+    await showMessage(t("notEffective"));
+    await waitForClick();
+  }
+
+  // Step 6 : K.O. si nécessaire
   if (target.currentPv <= 0) {
-    queueMessage(t("fainted", { name: pName(target) }));
+    await showMessage(t("fainted", { name: pName(target) }));
+    await waitForClick();
   }
 }
 
