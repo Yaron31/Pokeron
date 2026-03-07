@@ -136,6 +136,7 @@
     <!-- Overlay pause -->
     <div id="pause-overlay" class="pause-overlay hidden">
       <div class="pause-box">
+        <p class="pause-title">PAUSE</p>
         <ul id="pause-list">
           <li class="pause-item selected" data-action="resume">
             <span class="cursor">►</span> <span data-i18n="resume">REPRENDRE</span> <span class="cursor-right">◄</span>
@@ -154,6 +155,23 @@
             <button class="quit-btn" id="quit-no" data-i18n="no">NON</button>
           </div>
         </div>
+        <ul id="pause-options-list" class="hidden">
+          <li class="pause-opt-item selected" data-opt="musicVol">
+            <span class="cursor">►</span> <span class="opt-label" data-i18n="musicVol">MUSIQUE</span> <span class="opt-value"></span> <span class="cursor-right">◄</span>
+          </li>
+          <li class="pause-opt-item" data-opt="sfxVol">
+            <span class="cursor"> </span> <span class="opt-label" data-i18n="sfxVol">EFFETS</span> <span class="opt-value"></span> <span class="cursor-right"> </span>
+          </li>
+          <li class="pause-opt-item" data-opt="textSpeed">
+            <span class="cursor"> </span> <span class="opt-label" data-i18n="textSpeed">TEXTE</span> <span class="opt-value"></span> <span class="cursor-right"> </span>
+          </li>
+          <li class="pause-opt-item" data-opt="lang">
+            <span class="cursor"> </span> <span class="opt-label" data-i18n="lang">LANGUE</span> <span class="opt-value"></span> <span class="cursor-right"> </span>
+          </li>
+          <li class="pause-opt-item" data-opt="back">
+            <span class="cursor"> </span> <span data-i18n="back">RETOUR</span> <span class="cursor-right"> </span>
+          </li>
+        </ul>
       </div>
     </div>
   </div>

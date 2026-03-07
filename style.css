@@ -998,11 +998,22 @@ body {
 .pause-overlay.hidden { display: none; }
 
 .pause-box {
-  background: #1a1a2e;
-  border: 3px solid #ffcc00;
+  background: #000000a6;
+  border: 3px solid #cf4014;
   border-radius: 12px;
   padding: 20px 30px;
   min-width: 240px;
+  text-align: center;
+}
+
+.pause-title {
+  font-family: "Press Start 2P", monospace;
+  font-size: 14px;
+  color: #cf4014;
+  text-align: center;
+  margin: 0 0 12px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #cf4014;
 }
 
 #pause-list {
@@ -1010,32 +1021,34 @@ body {
   padding: 0;
   margin: 0;
 }
+#pause-list.hidden { display: none; }
 
 .pause-item {
   font-family: "Press Start 2P", monospace;
   font-size: 12px;
-  color: #ccc;
+  color: #ffffff;
   padding: 10px 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   transition: color 0.15s;
 }
-.pause-item .cursor, .pause-item .cursor-right { color: #ffcc00; min-width: 14px; }
-.pause-item.selected { color: #fff; }
+.pause-item .cursor, .pause-item .cursor-right { color: #cf4014; min-width: 14px; }
+.pause-item.selected { color: #cf4014; }
 
 .quit-confirm {
   text-align: center;
   padding: 15px 0 5px;
-  border-top: 1px solid #444;
+  border-top: 1px solid #cf4014;
   margin-top: 10px;
 }
 .quit-confirm.hidden { display: none; }
 .quit-confirm p {
   font-family: "Press Start 2P", monospace;
   font-size: 11px;
-  color: #ff6b6b;
+  color: #cf4014;
   margin: 0 0 12px;
 }
 
@@ -1048,16 +1061,38 @@ body {
 .quit-btn {
   font-family: "Press Start 2P", monospace;
   font-size: 11px;
-  background: #2a2a4a;
-  color: #ccc;
-  border: 2px solid #555;
+  background: #E8D8B0;
+  color: #383838;
+  border: 2px solid #cf4014;
   border-radius: 6px;
   padding: 8px 20px;
   cursor: pointer;
   transition: all 0.15s;
 }
 .quit-btn.selected {
-  color: #fff;
-  border-color: #ffcc00;
-  background: #3a3a5a;
+  color: #000;
+  border-color: #cf4014;
+  background: #D0C098;
 }
+
+/* Options dans le pause menu */
+#pause-options-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+#pause-options-list.hidden { display: none; }
+.pause-opt-item {
+  font-family: "Press Start 2P", monospace;
+  font-size: 12px;
+  color: #ffffff;
+  padding: 10px 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: color 0.15s;
+}
+.pause-opt-item .cursor, .pause-opt-item .cursor-right { color: #cf4014; min-width: 14px; }
+.pause-opt-item .opt-value { margin-left: auto; font-size: 10px; }
+.pause-opt-item.selected { color: #cf4014; }
