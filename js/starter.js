@@ -195,6 +195,7 @@ function createPokemonInstance(dataKey, level) {
     emoji: data.emoji,
     spriteFront: data.spriteFront,
     spriteBack: data.spriteBack,
+    spriteOffset: data.spriteOffset,
     level,
     stats: { ...stats },
     maxPv: stats.pv,

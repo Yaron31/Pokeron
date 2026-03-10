@@ -14,7 +14,11 @@ const POKEMON_DATA = {
     ],
     color: "#F08030", emoji: "🔥",
     spriteFront: "assets/images/front_charmander.png",
-    spriteBack: "assets/images/back_charmander.png"
+    spriteBack: "assets/images/back_charmander.png",
+    spriteOffset: {
+      front: { x: "-8px", y: "0px", scale: 1 },
+      back:  { x: "10px", y: "0px", scale: 1 }
+    }
   },
   carapuce: {
     name: { fr: "Carapuce", en: "Squirtle" },
@@ -27,7 +31,11 @@ const POKEMON_DATA = {
     ],
     color: "#6890F0", emoji: "💧",
     spriteFront: "assets/images/front_squirtle.png",
-    spriteBack: "assets/images/back_squirtle.png"
+    spriteBack: "assets/images/back_squirtle.png",
+    spriteOffset: {
+      front: { x: "0px", y: "0px", scale: 1 },
+      back:  { x: "5px", y: "0px", scale: 1 }
+    }
   },
   bulbizarre: {
     name: { fr: "Bulbizarre", en: "Bulbasaur" },
@@ -40,7 +48,11 @@ const POKEMON_DATA = {
     ],
     color: "#78C850", emoji: "🌿",
     spriteFront: "assets/images/front_bulbasaur.png",
-    spriteBack: "assets/images/back_bulbasaur.png"
+    spriteBack: "assets/images/back_bulbasaur.png",
+    spriteOffset: {
+      front: { x: "-5px", y: "0px", scale: 1 },
+      back:  { x: "5px", y: "0px", scale: 1 }
+    }
   }
 };
 
@@ -52,6 +64,13 @@ const TYPE_CHART = {
 };
 
 const MATCHUPS = { salameche: "bulbizarre", carapuce: "salameche", bulbizarre: "carapuce" };
+
+const TYPE_NAMES = {
+  feu:    { fr: "FEU",    en: "FIRE" },
+  eau:    { fr: "EAU",    en: "WATER" },
+  plante: { fr: "PLANTE", en: "GRASS" },
+  normal: { fr: "NORMAL", en: "NORMAL" }
+};
 
 let gameState = {
   playerPokemon: null,

@@ -3,12 +3,71 @@
    ============================================== */
 
 // ==============================================
-// Messages narratifs
+// Messages narratifs + système pause/resume
 // ==============================================
 const messageQueue = [];
 let messageResolve = null;
 let typewriterDone = false;
 let typewriterInterval = null;
+
+// --- État pause combat ---
+let battlePaused = false;
+
+// Typewriter : état sauvegardé pour pause/resume
+let _twText = "";
+let _twIndex = 0;
+let _twResolve = null;
+
+// Delay pausable
+let _delayTimer = null;
+let _delayResolve = null;
+let _delayRemaining = 0;
+let _delayStart = 0;
+
+function pauseBattle() {
+  battlePaused = true;
+  // Pause typewriter
+  if (typewriterInterval) {
+    clearInterval(typewriterInterval);
+    typewriterInterval = null;
+  }
+  // Pause delay
+  if (_delayTimer) {
+    clearTimeout(_delayTimer);
+    _delayRemaining -= (Date.now() - _delayStart);
+    _delayTimer = null;
+  }
+}
+
+function resumeBattle() {
+  battlePaused = false;
+  // Resume typewriter
+  if (!typewriterDone && _twResolve) {
+    const textEl = document.getElementById("battle-text");
+    typewriterInterval = setInterval(() => {
+      if (_twIndex < _twText.length) {
+        textEl.textContent += _twText[_twIndex];
+        _twIndex++;
+      } else {
+        clearInterval(typewriterInterval);
+        typewriterInterval = null;
+        typewriterDone = true;
+        _twResolve();
+        _twResolve = null;
+      }
+    }, TEXT_SPEED_MS[settings.textSpeed] || 30);
+  }
+  // Resume delay
+  if (_delayResolve && _delayRemaining > 0) {
+    const resolve = _delayResolve;
+    _delayStart = Date.now();
+    _delayTimer = setTimeout(() => {
+      _delayTimer = null;
+      _delayResolve = null;
+      resolve();
+    }, _delayRemaining);
+  }
+}
 
 function queueMessage(text) {
   messageQueue.push(text);
@@ -31,16 +90,19 @@ function showMessage(text) {
     const textEl = document.getElementById("battle-text");
     textEl.textContent = "";
     typewriterDone = false;
-    let i = 0;
+    _twText = text;
+    _twIndex = 0;
+    _twResolve = resolve;
 
     typewriterInterval = setInterval(() => {
-      if (i < text.length) {
-        textEl.textContent += text[i];
-        i++;
+      if (_twIndex < text.length) {
+        textEl.textContent += text[_twIndex];
+        _twIndex++;
       } else {
         clearInterval(typewriterInterval);
         typewriterInterval = null;
         typewriterDone = true;
+        _twResolve = null;
         resolve();
       }
     }, TEXT_SPEED_MS[settings.textSpeed] || 30);
@@ -51,6 +113,7 @@ function showMessage(text) {
         typewriterInterval = null;
         textEl.textContent = text;
         typewriterDone = true;
+        _twResolve = null;
         messageResolve = null;
         resolve();
       }
@@ -65,6 +128,7 @@ function waitForClick() {
 }
 
 document.getElementById("battle-textbox").addEventListener("click", () => {
+  if (battlePaused) return;
   if (messageResolve) {
     const fn = messageResolve;
     messageResolve = null;
@@ -99,6 +163,16 @@ function aiChooseMove(enemy, player) {
 // ==============================================
 // UI Combat
 // ==============================================
+function applySpriteOffset(container, offset) {
+  if (!offset) return;
+  const img = container.querySelector(".sprite-img");
+  if (!img) return;
+  const x = offset.x || "0px";
+  const y = offset.y || "0px";
+  const s = offset.scale || 1;
+  img.style.transform = `translate(${x}, ${y}) scale(${s})`;
+}
+
 function updateHpBar(who, pokemon) {
   const pct = Math.max(0, (pokemon.currentPv / pokemon.maxPv) * 100);
   const fill = document.getElementById(who + "-hp");
@@ -124,6 +198,7 @@ function setupBattleUI() {
   playerSprite.textContent = "";
   playerSprite.style.backgroundColor = "";
   playerSprite.innerHTML = `<img src="${p.spriteBack}" alt="${pName(p)}" class="sprite-img">`;
+  applySpriteOffset(playerSprite, p.spriteOffset?.back);
 
   document.getElementById("enemy-name").textContent = pName(e);
   document.getElementById("enemy-level").textContent = `${t("levelAbbr")}${e.level}`;
@@ -131,6 +206,7 @@ function setupBattleUI() {
   enemySprite.textContent = "";
   enemySprite.style.backgroundColor = "";
   enemySprite.innerHTML = `<img src="${e.spriteFront}" alt="${pName(e)}" class="sprite-img">`;
+  applySpriteOffset(enemySprite, e.spriteOffset?.front);
 
   updateHpBar("player", p);
   updateHpBar("enemy", e);
@@ -145,9 +221,16 @@ function renderMoveButtons() {
 
   gameState.playerPokemon.moves.forEach((move, i) => {
     const btn = document.createElement("button");
-    btn.className = `move-btn type-${move.type}`;
-    btn.innerHTML = `<span>${moveName(move)}</span><span class="move-pp">PP ${move.currentPp}/${move.pp}</span>`;
+    btn.className = "move-btn type-" + move.type;
+    const typeName = TYPE_NAMES[move.type]?.[settings.lang] || move.type.toUpperCase();
+    btn.innerHTML = `
+      <div class="move-btn-row">
+        <span class="move-name">${moveName(move)}</span>
+        <span class="move-pp">PP ${move.currentPp}/${move.pp}</span>
+      </div>
+      <span class="move-type-label type-${move.type}">${typeName}</span>`;
     btn.addEventListener("click", () => {
+      if (battlePaused) return;
       if (!gameState.battleActive) return;
       if (move.currentPp <= 0) return;
       playerChooseMove(i);
@@ -212,7 +295,19 @@ async function playerChooseMove(moveIndex) {
 
 const ATTACK_SLIDE_MS = 350;
 const HIT_ANIM_MS = 400;
-function delay(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+function delay(ms) {
+  return new Promise(resolve => {
+    _delayResolve = resolve;
+    _delayRemaining = ms;
+    _delayStart = Date.now();
+    _delayTimer = setTimeout(() => {
+      _delayTimer = null;
+      _delayResolve = null;
+      resolve();
+    }, ms);
+  });
+}
 
 async function executeAttack({ mon, move, target, isPlayer }) {
   move.currentPp = Math.max(0, move.currentPp - 1);

@@ -113,7 +113,7 @@ document.addEventListener("keydown", (e) => {
         } else {
           closePause();
         }
-      } else if (gameState.battleActive) {
+      } else {
         openPause();
       }
       return;

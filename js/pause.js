@@ -13,7 +13,13 @@ const pauseItems = document.querySelectorAll(".pause-item");
 const quitConfirm = document.getElementById("quit-confirm");
 const pauseOptionsList = document.getElementById("pause-options-list");
 const pauseOptItems = document.querySelectorAll(".pause-opt-item");
-const totalPauseOpts = pauseOptItems.length;
+
+// Items visibles dans les options pause (recalculé à chaque ouverture)
+let visiblePauseOpts = [];
+
+function getVisiblePauseOpts() {
+  return Array.from(pauseOptItems).filter(item => item.style.display !== "none");
+}
 
 function togglePause() {
   if (pauseOpen) {
@@ -33,6 +39,7 @@ function openPause() {
   document.getElementById("pause-list").classList.remove("hidden");
   pauseOverlay.classList.remove("hidden");
   updatePauseSelection();
+  pauseBattle();
 }
 
 function closePause() {
@@ -42,6 +49,7 @@ function closePause() {
   quitConfirm.classList.add("hidden");
   pauseOptionsList.classList.add("hidden");
   pauseOverlay.classList.add("hidden");
+  resumeBattle();
 }
 
 function updatePauseSelection() {
@@ -110,6 +118,17 @@ function confirmPauseSelection() {
 function openPauseOptions() {
   pauseOptionsOpen = true;
   pauseOptIndex = 0;
+
+  // Cacher les options non disponibles en combat (textSpeed, lang)
+  pauseOptItems.forEach(item => {
+    if (item.classList.contains("pause-only-hide")) {
+      item.style.display = "none";
+    } else {
+      item.style.display = "";
+    }
+  });
+  visiblePauseOpts = getVisiblePauseOpts();
+
   document.getElementById("pause-list").classList.add("hidden");
   pauseOptionsList.classList.remove("hidden");
   updatePauseOptionsDisplay();
@@ -119,12 +138,14 @@ function openPauseOptions() {
 function closePauseOptions() {
   pauseOptionsOpen = false;
   pauseOptionsList.classList.add("hidden");
+  // Restaurer la visibilité de tous les items
+  pauseOptItems.forEach(item => { item.style.display = ""; });
   document.getElementById("pause-list").classList.remove("hidden");
   playMenuTick();
 }
 
 function updatePauseOptSelection() {
-  pauseOptItems.forEach((item, i) => {
+  visiblePauseOpts.forEach((item, i) => {
     const cursor = item.querySelector(".cursor");
     const cursorRight = item.querySelector(".cursor-right");
     if (i === pauseOptIndex) {
@@ -140,13 +161,14 @@ function updatePauseOptSelection() {
 }
 
 function navigatePauseOptions(direction) {
-  pauseOptIndex = (pauseOptIndex + direction + totalPauseOpts) % totalPauseOpts;
+  const total = visiblePauseOpts.length;
+  pauseOptIndex = (pauseOptIndex + direction + total) % total;
   updatePauseOptSelection();
   playMenuTick();
 }
 
 function adjustPauseOption(direction) {
-  const opt = pauseOptItems[pauseOptIndex].dataset.opt;
+  const opt = visiblePauseOpts[pauseOptIndex].dataset.opt;
   if (opt === "musicVol") {
     settings.musicVol = Math.max(0, Math.min(10, settings.musicVol + direction));
   } else if (opt === "sfxVol") {
@@ -166,7 +188,7 @@ function adjustPauseOption(direction) {
 }
 
 function confirmPauseOption() {
-  const opt = pauseOptItems[pauseOptIndex].dataset.opt;
+  const opt = visiblePauseOpts[pauseOptIndex].dataset.opt;
   if (opt === "back") {
     closePauseOptions();
   } else {
@@ -216,7 +238,10 @@ document.getElementById("quit-no").addEventListener("click", () => {
 pauseOptItems.forEach((item, i) => {
   item.addEventListener("click", () => {
     if (!pauseOptionsOpen) return;
-    pauseOptIndex = i;
+    // Trouver l'index dans visiblePauseOpts
+    const visIdx = visiblePauseOpts.indexOf(item);
+    if (visIdx === -1) return;
+    pauseOptIndex = visIdx;
     updatePauseOptSelection();
     confirmPauseOption();
   });

@@ -62,6 +62,7 @@ function loadGame() {
         currentPv: p.maxPv,
         spriteFront: template.spriteFront,
         spriteBack: template.spriteBack,
+        spriteOffset: template.spriteOffset,
         moves: p.moves,
         exp: p.exp
       },
