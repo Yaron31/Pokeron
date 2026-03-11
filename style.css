@@ -760,6 +760,52 @@ body {
   margin-top: 2px;
 }
 
+/* --- Barre XP --- */
+.xp-bar-container {
+  margin-top: 2px;
+}
+.xp-bar {
+  height: 4px;
+  background: #383838;
+  border-radius: 2px;
+  border: 1px solid #282828;
+  overflow: hidden;
+}
+.xp-fill {
+  height: 100%;
+  background: linear-gradient(to bottom, #64B5F6, #42A5F5);
+  border-radius: 1px;
+  transition: width 0.5s ease;
+  width: 0%;
+}
+
+/* --- Panneau stat gains (level up) --- */
+.stat-gains-popup {
+  position: absolute;
+  right: 2%;
+  bottom: 2%;
+  z-index: 20;
+}
+.stat-gains-popup.hidden { display: none; }
+.stat-gains-box {
+  background: #F8F8F8;
+  border: 3px solid #585868;
+  border-radius: 4px;
+  padding: 16px 24px;
+  font-family: "Press Start 2P", monospace;
+  font-size: clamp(10px, 1.8vw, 14px);
+  color: #383838;
+  min-width: 240px;
+}
+.stat-gains-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  gap: 24px;
+}
+.stat-gains-row .stat-label { text-align: left; }
+.stat-gains-row .stat-value { text-align: right; }
+
 /* --- Textbox combat — style GBA crème --- */
 .battle-textbox {
   background: #303030;

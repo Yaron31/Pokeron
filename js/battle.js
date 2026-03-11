@@ -69,6 +69,8 @@ function resumeBattle() {
   }
 }
 
+let _pendingStatGains = null;
+
 function queueMessage(text) {
   messageQueue.push(text);
 }
@@ -80,6 +82,10 @@ async function processMessages() {
   for (const msg of messageQueue) {
     await showMessage(msg);
     await waitForClick();
+    if (_pendingStatGains) {
+      await showStatGainsPanel(_pendingStatGains.gains, _pendingStatGains.stats);
+      _pendingStatGains = null;
+    }
   }
   messageQueue.length = 0;
   movesDiv.classList.remove("hidden");
@@ -188,6 +194,13 @@ function updateHpBar(who, pokemon) {
   }
 }
 
+function updateXpBar(pokemon) {
+  const nextLevelExp = Math.pow(pokemon.level + 1, 3);
+  const prevLevelExp = Math.pow(pokemon.level, 3);
+  const pct = Math.min(100, ((pokemon.exp - prevLevelExp) / (nextLevelExp - prevLevelExp)) * 100);
+  document.getElementById("player-xp").style.width = Math.max(0, pct) + "%";
+}
+
 function setupBattleUI() {
   const p = gameState.playerPokemon;
   const e = gameState.enemyPokemon;
@@ -210,6 +223,7 @@ function setupBattleUI() {
 
   updateHpBar("player", p);
   updateHpBar("enemy", e);
+  updateXpBar(p);
 
   renderMoveButtons();
 }
@@ -387,14 +401,6 @@ function showResult(won) {
 
     summaryEl.innerHTML = `
       <div class="result-pokemon-line">${pName(p)} ${t("levelAbbr")}${p.level}</div>
-      <div class="result-stats">
-        <div class="result-stat">${t("hpLabel")}: <span>${p.currentPv}/${p.maxPv}</span></div>
-        <div class="result-stat">${t("atkLabel")}: <span>${p.stats.atk}</span></div>
-        <div class="result-stat">${t("defLabel")}: <span>${p.stats.def}</span></div>
-        <div class="result-stat">${t("atkSpeLabel")}: <span>${p.stats.atkSpe}</span></div>
-        <div class="result-stat">${t("defSpeLabel")}: <span>${p.stats.defSpe}</span></div>
-        <div class="result-stat">${t("vitLabel")}: <span>${p.stats.vitesse}</span></div>
-      </div>
       <div class="result-battle-count">${t("battleCount", { count: gameState.combatNumber })}</div>
       <div class="result-saved-msg" id="saved-msg">${t("saved")}</div>
     `;
@@ -448,6 +454,7 @@ function restorePokemon(pokemon) {
 function gainExp(winner, loserLevel) {
   const expGained = loserLevel * 15;
   winner.exp += expGained;
+  updateXpBar(winner);
   queueMessage(t("expGain", { name: pName(winner), exp: expGained }));
 
   const nextLevelExp = Math.pow(winner.level + 1, 3);
@@ -466,7 +473,44 @@ function levelUp(pokemon) {
     gains[stat] = bonus;
   }
   pokemon.maxPv = pokemon.stats.pv;
+  updateXpBar(pokemon);
   playLevelUpSound();
   queueMessage(t("levelUp", { name: pName(pokemon), level: pokemon.level }));
-  queueMessage(t("statGains", { pv: gains.pv, atk: gains.atk, def: gains.def }));
+  _pendingStatGains = { gains, stats: { ...pokemon.stats } };
+}
+
+function showStatGainsPanel(gains, stats) {
+  return new Promise(resolve => {
+    const popup = document.getElementById("stat-gains-popup");
+    const box = popup.querySelector(".stat-gains-box");
+    const labels = [
+      [t("hpLabel"), gains.pv, stats.pv],
+      [t("atkLabel"), gains.atk, stats.atk],
+      [t("defLabel"), gains.def, stats.def],
+      [t("atkSpeLabel"), gains.atkSpe, stats.atkSpe],
+      [t("defSpeLabel"), gains.defSpe, stats.defSpe],
+      [t("vitLabel"), gains.vitesse, stats.vitesse],
+    ];
+    // Phase 1 : gains
+    box.innerHTML = labels.map(([l, g]) =>
+      `<div class="stat-gains-row"><span class="stat-label">${l}</span><span class="stat-value">+ ${g}</span></div>`
+    ).join("");
+    popup.classList.remove("hidden");
+
+    const onClick1 = () => {
+      document.removeEventListener("click", onClick1);
+      // Phase 2 : stats totales
+      box.innerHTML = labels.map(([l, , s]) =>
+        `<div class="stat-gains-row"><span class="stat-label">${l}</span><span class="stat-value">${s}</span></div>`
+      ).join("");
+
+      const onClick2 = () => {
+        document.removeEventListener("click", onClick2);
+        popup.classList.add("hidden");
+        resolve();
+      };
+      setTimeout(() => document.addEventListener("click", onClick2, { once: true }), 100);
+    };
+    setTimeout(() => document.addEventListener("click", onClick1, { once: true }), 100);
+  });
 }
