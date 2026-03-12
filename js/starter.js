@@ -75,7 +75,7 @@ function renderStarterCards() {
     if (c._animTimer) clearTimeout(c._animTimer);
   });
   container.innerHTML = "";
-  const keys = Object.keys(POKEMON_DATA);
+  const keys = ["salameche", "carapuce", "bulbizarre"];
 
   keys.forEach((key, idx) => {
     const data = POKEMON_DATA[key];
@@ -129,6 +129,10 @@ function closeAllPokeballs() {
 function showStarterScreen() {
   menuScreen.classList.add("fade-out");
   fadeOutAudio(gameTheme, 500);
+  setTimeout(() => {
+    oakTheme.currentTime = 0;
+    oakTheme.play().catch(() => {});
+  }, 500);
   starterIndex = 0;
   renderStarterCards();
 
@@ -144,6 +148,7 @@ function showStarterScreen() {
 }
 
 function selectStarter(key) {
+  fadeOutAudio(oakTheme, 500);
   playPokeballOpen();
   deleteSave();
   gameState.playerPokemon = createPokemonInstance(key, 5);
@@ -155,11 +160,6 @@ function selectStarter(key) {
 function continueGame() {
   const save = loadGame();
   if (!save) return;
-  settings.lang = save.lang;
-  settings.musicVol = save.musicVol;
-  settings.sfxVol = save.sfxVol;
-  saveSettings();
-  applyLanguage();
   gameState.playerPokemon = save.playerPokemon;
   gameState.combatNumber = save.combatNumber;
   generateEnemy();
@@ -177,6 +177,18 @@ function generateEnemy() {
 // ==============================================
 // Création d'instance Pokémon
 // ==============================================
+function getMovesForLevel(dataKey, data, level) {
+  const learnset = getLearnset(dataKey);
+  if (learnset) {
+    const available = learnset
+      .filter(entry => entry.level <= level)
+      .map(entry => ({ ...entry.move, currentPp: entry.move.pp }));
+    return available.slice(-4);
+  }
+  if (data.moves) return data.moves.map(m => ({ ...m, currentPp: m.pp }));
+  return [];
+}
+
 function createPokemonInstance(dataKey, level) {
   const data = POKEMON_DATA[dataKey];
   const stats = {};
@@ -200,7 +212,8 @@ function createPokemonInstance(dataKey, level) {
     stats: { ...stats },
     maxPv: stats.pv,
     currentPv: stats.pv,
-    moves: data.moves.map(m => ({ ...m, currentPp: m.pp })),
+    moves: getMovesForLevel(dataKey, data, level),
+    statModifiers: {},
     exp: 0
   };
 }

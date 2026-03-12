@@ -145,15 +145,41 @@ function resetTitleScreen() {
 
 let resultEmbersInterval = null;
 
+function battleTransition(from, callback) {
+  const top = document.getElementById("battle-curtain-top");
+  const bot = document.getElementById("battle-curtain-bottom");
+
+  // Phase 1 : noir instantane
+  top.className = "battle-curtain top closed";
+  bot.className = "battle-curtain bottom closed";
+
+  // Phase 2 : switcher les ecrans derriere le noir, pause 0.8s
+  setTimeout(() => {
+    from.classList.remove("active");
+    battleScreen.classList.add("active");
+
+    // Phase 3 : ouverture lente (1s)
+    top.className = "battle-curtain top opening";
+    bot.className = "battle-curtain bottom opening";
+
+    // Phase 4 : cleanup
+    setTimeout(() => {
+      top.className = "battle-curtain top";
+      bot.className = "battle-curtain bottom";
+      if (callback) callback();
+    }, 1000);
+  }, 800);
+}
+
 function transitionToBattle() {
   currentScreen = "battle";
-  transitionToScreen(starterScreen, battleScreen, () => startBattle());
+  battleTransition(starterScreen, () => startBattle());
 }
 
 function transitionToBattleFromMenu() {
   currentScreen = "battle";
   fadeOutAudio(gameTheme, 500);
-  transitionToScreen(menuScreen, battleScreen, () => startBattle());
+  battleTransition(menuScreen, () => startBattle());
 }
 
 function transitionToResult() {
@@ -166,11 +192,13 @@ function transitionToResult() {
 
 function transitionToBattleFromResult() {
   currentScreen = "battle";
-  transitionToScreen(resultScreen, battleScreen, () => startBattle());
+  fadeOutAudio(victoryTheme, 500);
+  battleTransition(resultScreen, () => startBattle());
 }
 
 function transitionToMenu() {
   currentScreen = "menu";
+  fadeOutAudio(victoryTheme, 500);
   transitionToScreen(resultScreen, menuScreen, () => {
     gameTheme.currentTime = 0;
     gameTheme.play().catch(() => {});
@@ -183,6 +211,7 @@ function transitionToMenu() {
 
 function transitionToMenuFromBattle() {
   currentScreen = "menu";
+  fadeOutAudio(battleTheme, 500);
   transitionToScreen(battleScreen, menuScreen, () => {
     gameTheme.currentTime = 0;
     gameTheme.play().catch(() => {});
@@ -396,6 +425,9 @@ function applySettings() {
   const sfxVol = settings.sfxVol / 10;
   titleTheme.volume = musicVol;
   gameTheme.volume = musicVol;
+  oakTheme.volume = musicVol;
+  battleTheme.volume = musicVol;
+  victoryTheme.volume = musicVol;
   charizardCry.volume = sfxVol;
 }
 

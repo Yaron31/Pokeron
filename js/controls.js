@@ -183,6 +183,12 @@ document.addEventListener("keydown", (e) => {
       } else if (e.key === "2" && moves[1] && moves[1].currentPp > 0) {
         e.preventDefault();
         playerChooseMove(1);
+      } else if (e.key === "3" && moves[2] && moves[2].currentPp > 0) {
+        e.preventDefault();
+        playerChooseMove(2);
+      } else if (e.key === "4" && moves[3] && moves[3].currentPp > 0) {
+        e.preventDefault();
+        playerChooseMove(3);
       }
     }
   }
@@ -204,6 +210,7 @@ function updateStarterFocus() {
 }
 
 function backToMenuFromStarter() {
+  fadeOutAudio(oakTheme, 500);
   currentScreen = "menu";
   transitionToScreen(starterScreen, menuScreen, () => {
     gameTheme.currentTime = 0;

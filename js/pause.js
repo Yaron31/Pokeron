@@ -235,6 +235,19 @@ document.getElementById("quit-no").addEventListener("click", () => {
   confirmPauseSelection();
 });
 
+document.getElementById("quit-yes").addEventListener("mouseenter", () => {
+  if (!quitConfirmOpen) return;
+  quitConfirmIndex = 0;
+  document.getElementById("quit-yes").classList.add("selected");
+  document.getElementById("quit-no").classList.remove("selected");
+});
+document.getElementById("quit-no").addEventListener("mouseenter", () => {
+  if (!quitConfirmOpen) return;
+  quitConfirmIndex = 1;
+  document.getElementById("quit-yes").classList.remove("selected");
+  document.getElementById("quit-no").classList.add("selected");
+});
+
 pauseOptItems.forEach((item, i) => {
   item.addEventListener("click", () => {
     if (!pauseOptionsOpen) return;

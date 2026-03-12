@@ -5,11 +5,20 @@
 const charizardCry = new Audio("assets/sons/charizard-cry.mp3");
 const titleTheme = new Audio("assets/sons/title-theme.mp3");
 const gameTheme = new Audio("assets/sons/1-04. Game Tutorial.mp3");
+const oakTheme = new Audio("assets/sons/06. Professor Oak.mp3");
+const battleTheme = new Audio("assets/sons/09. Battle! (Trainer).mp3");
+const victoryTheme = new Audio("assets/sons/10. Victory! (Trainer).mp3");
 gameTheme.loop = true;
 gameTheme.volume = 0.5;
+oakTheme.loop = true;
+oakTheme.volume = 0.5;
 titleTheme.loop = true;
 titleTheme.volume = 0.5;
 charizardCry.volume = 0.7;
+battleTheme.loop = true;
+battleTheme.volume = 0.5;
+victoryTheme.loop = false;
+victoryTheme.volume = 0.5;
 
 // --- Audio Context pour sons synthétisés ---
 let audioCtx = null;

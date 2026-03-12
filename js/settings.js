@@ -64,6 +64,7 @@ function loadGame() {
         spriteBack: template.spriteBack,
         spriteOffset: template.spriteOffset,
         moves: p.moves,
+        statModifiers: {},
         exp: p.exp
       },
       combatNumber: data.combatNumber,

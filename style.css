@@ -453,6 +453,37 @@ body {
   100% { opacity: 1; }
 }
 
+/* --- Rideaux noirs transition combat --- */
+.battle-curtain {
+  position: fixed;
+  left: 0;
+  width: 100%;
+  height: 50%;
+  background: #000;
+  z-index: 100;
+  pointer-events: none;
+  display: none;
+}
+.battle-curtain.top { top: 0; }
+.battle-curtain.bottom { bottom: 0; }
+.battle-curtain.closed { display: block; }
+.battle-curtain.opening.top {
+  display: block;
+  animation: curtainOpenTop 1s ease-in forwards;
+}
+.battle-curtain.opening.bottom {
+  display: block;
+  animation: curtainOpenBottom 1s ease-in forwards;
+}
+@keyframes curtainOpenTop {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(-100%); }
+}
+@keyframes curtainOpenBottom {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(100%); }
+}
+
 /* ==============================================
    RESPONSIVE
    ============================================== */
@@ -588,13 +619,13 @@ body {
 .type-eau { background: #6890F0; color: #fff; }
 .type-plante { background: #78C850; color: #fff; }
 .type-normal { background: #A8A878; color: #fff; }
+.type-dragon { background: #7038F8; color: #fff; }
 
 /* ==============================================
    ÉCRAN DE COMBAT — Style Pokémon Rouge Feu GBA
    ============================================== */
 #battle-screen {
   flex-direction: column;
-  justify-content: flex-end;
 }
 
 /* --- Fond : ciel + herbe GBA --- */
@@ -642,6 +673,7 @@ body {
   position: absolute;
   background: transparent;
   z-index: 5;
+  overflow: hidden;
 }
 
 .sprite-img {
@@ -681,7 +713,7 @@ body {
 }
 .player-platform {
   width: 450px;
-  bottom: -15%;
+  bottom: -10%;
   left: 6%;
 }
 
@@ -791,16 +823,16 @@ body {
   background: #F8F8F8;
   border: 3px solid #585868;
   border-radius: 4px;
-  padding: 16px 24px;
+  padding: 20px 32px;
   font-family: "Press Start 2P", monospace;
-  font-size: clamp(10px, 1.8vw, 14px);
+  font-size: clamp(12px, 2vw, 16px);
   color: #383838;
-  min-width: 240px;
+  min-width: 280px;
 }
 .stat-gains-row {
   display: flex;
   justify-content: space-between;
-  padding: 6px 0;
+  padding: 8px 0;
   gap: 24px;
 }
 .stat-gains-row .stat-label { text-align: left; }
@@ -808,13 +840,17 @@ body {
 
 /* --- Textbox combat — style GBA crème --- */
 .battle-textbox {
+  position: absolute;
+  bottom: 80px;
+  left: 17%;
+  right: 17%;
+  transform: translateY(60px);
   background: #303030;
   border: 4px solid #cf4014;
   border-radius: 9px;
-  padding: 20px 18px;
+  padding: 20px;
   margin: 0;
-  width: 100%;
-  min-height: 80px;
+  min-height: 75px;
   cursor: pointer;
   z-index: 10;
 }
@@ -829,14 +865,15 @@ body {
 
 /* --- Boutons d'attaque --- */
 .battle-moves {
+  position: absolute;
+  bottom: 20px;
+  right: 0;
+  width: auto;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0;
-  width: 100%;
-  z-index: 9;
-  background: #F8F0D0;
-  margin-top: -9px;
-  padding-top: 9px;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  z-index: 11;
+  background: transparent;
   border-top: none;
 }
 
@@ -846,9 +883,9 @@ body {
 
 .move-btn {
   font-family: "Press Start 2P", monospace;
-  font-size: clamp(15px, 1.8vw, 11px);
-  padding: 10px 12px;
-  border: 5px solid #A0906C;
+  font-size: clamp(11px, 1.4vw, 9px);
+  padding: 8px 10px;
+  border: 3px solid #A0906C;
   border-radius: 10px;
   cursor: pointer;
   background: #F8F0D0;
@@ -856,7 +893,8 @@ body {
   text-align: left;
   transition: background 0.1s;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
   gap: 6px;
 }
 
@@ -868,15 +906,9 @@ body {
   background: #D8D0B0;
 }
 
-.move-btn-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-}
 
 .move-name {
-  flex: 1;
+  white-space: nowrap;
 }
 
 .move-pp {
@@ -891,17 +923,45 @@ body {
   border-radius: 3px;
   color: #fff;
   display: inline-block;
+  margin-left: auto;
 }
-.move-type-label.type-feu { background: #F08030; }
-.move-type-label.type-eau { background: #6890F0; }
-.move-type-label.type-plante { background: #78C850; }
-.move-type-label.type-normal { background: #A8A878; }
+.move-category-icon {
+  font-size: clamp(10px, 1vw, 8px);
+  min-width: 28px;
+  height: 18px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  color: #fff;
+}
+.move-category-icon span {
+  display: inline-block;
+  transform: scaleX(2);
+}
+.cat-physique { background: #c05128; }
+.cat-speciale { background: #607dff; }
+.cat-statut   { background: #8C888C; }
+
+.move-type-label.type-feu      { background: #F08030; }
+.move-type-label.type-eau      { background: #6890F0; }
+.move-type-label.type-plante   { background: #78C850; }
+.move-type-label.type-normal   { background: #A8A878; }
+.move-type-label.type-dragon   { background: #7038F8; }
+.move-type-label.type-poison   { background: #A040A0; }
+.move-type-label.type-tenebres { background: #705848; }
+.move-type-label.type-acier    { background: #B8B8D0; }
 
 /* Bordures colorées par type */
-.move-btn.type-feu    { border-color: #F08030; }
-.move-btn.type-eau    { border-color: #6890F0; }
-.move-btn.type-plante { border-color: #78C850; }
-.move-btn.type-normal { border-color: #A8A878; }
+.move-btn.type-feu      { border-color: #F08030; }
+.move-btn.type-eau      { border-color: #6890F0; }
+.move-btn.type-plante   { border-color: #78C850; }
+.move-btn.type-normal   { border-color: #A8A878; }
+.move-btn.type-dragon   { border-color: #7038F8; }
+.move-btn.type-poison   { border-color: #A040A0; }
+.move-btn.type-tenebres { border-color: #705848; }
+.move-btn.type-acier    { border-color: #B8B8D0; }
 
 /* --- Animations combat --- */
 @keyframes damageShake {
@@ -942,14 +1002,51 @@ body {
 .attack-slide-left  { animation: attackSlideLeft 0.35s ease-in-out; }
 
 @keyframes hitFlash {
-  0%   { filter: brightness(1); }
-  25%  { filter: brightness(10) saturate(0); }
-  50%  { filter: brightness(1); }
-  75%  { filter: brightness(8) saturate(0); }
-  100% { filter: brightness(1); }
+  0%   { filter: brightness(1) drop-shadow(0 0 0 transparent); }
+  25%  { filter: brightness(8) drop-shadow(0 0 20px var(--hit-color, white)); }
+  50%  { filter: brightness(1) drop-shadow(0 0 0 transparent); }
+  75%  { filter: brightness(6) drop-shadow(0 0 16px var(--hit-color, white)); }
+  100% { filter: brightness(1) drop-shadow(0 0 0 transparent); }
 }
 
 .hit-flash { animation: hitFlash 0.4s ease; }
+
+/* --- Projectile (attaque spéciale) --- */
+.projectile {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--projectile-color, white);
+  box-shadow: 0 0 12px var(--projectile-color, white), 0 0 24px var(--projectile-color, white);
+  z-index: 20;
+  pointer-events: none;
+}
+
+/* --- Overlay de stat Gen III (masqué sur le Pokémon) --- */
+.stat-overlay {
+  position: absolute;
+  z-index: 15;
+  pointer-events: none;
+  image-rendering: pixelated;
+  background-repeat: repeat;
+  background-size: 100% auto;
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  top: 0;
+  left: 0;
+}
+
+/* --- Animation d'évolution --- */
+@keyframes evolutionFlash {
+  0%, 100% { opacity: 1; filter: brightness(1); }
+  50% { opacity: 0.7; filter: brightness(3); }
+}
+.evolving { animation: evolutionFlash 0.4s ease infinite; }
 
 /* ==============================================
    ÉCRAN RÉSULTAT (VICTOIRE / DÉFAITE)

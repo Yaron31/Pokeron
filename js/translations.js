@@ -60,7 +60,20 @@ const translations = {
     defLabel: "Déf",
     atkSpeLabel: "Atk Spé",
     defSpeLabel: "Déf Spé",
-    vitLabel: "Vitesse"
+    vitLabel: "Vitesse",
+    accuracyLabel: "Précision",
+    attackMissed: "L'attaque a échoué !",
+    statFell: "{stat} de {name} baisse !",
+    statRose: "{stat} de {name} augmente !",
+    learnedMove: "{name} apprend {move} !",
+    wantsToLearn: "{name} veut apprendre {move}.",
+    butCantLearn: "Mais {name} connaît déjà 4 attaques.",
+    replaceWhich: "Oublier quelle attaque pour {move} ?",
+    forgotMove: "{name} oublie {move}...",
+    didNotLearn: "{name} n'a pas appris {move}.",
+    dontLearn: "Ne pas apprendre",
+    evolving: "{name} évolue !",
+    evolved: "Félicitations ! {old} évolue en {new} !"
   },
   en: {
     subtitle: "Fire Red",
@@ -119,7 +132,20 @@ const translations = {
     defLabel: "Def",
     atkSpeLabel: "Sp. Atk",
     defSpeLabel: "Sp. Def",
-    vitLabel: "Speed"
+    vitLabel: "Speed",
+    accuracyLabel: "Accuracy",
+    attackMissed: "The attack missed!",
+    statFell: "{name}'s {stat} fell!",
+    statRose: "{name}'s {stat} rose!",
+    learnedMove: "{name} learned {move}!",
+    wantsToLearn: "{name} wants to learn {move}.",
+    butCantLearn: "But {name} already knows 4 moves.",
+    replaceWhich: "Forget which move for {move}?",
+    forgotMove: "{name} forgot {move}...",
+    didNotLearn: "{name} did not learn {move}.",
+    dontLearn: "Don't learn",
+    evolving: "{name} is evolving!",
+    evolved: "Congratulations! {old} evolved into {new}!"
   }
 };
 
@@ -127,7 +153,7 @@ const translations = {
 function t(key, params = {}) {
   let text = translations[settings.lang]?.[key] ?? translations.fr[key] ?? key;
   for (const [k, v] of Object.entries(params)) {
-    text = text.replace(`{${k}}`, v);
+    text = text.replaceAll(`{${k}}`, v);
   }
   return text;
 }
