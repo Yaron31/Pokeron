@@ -18,20 +18,32 @@ function saveSettings() {
 }
 
 // --- Sauvegarde de partie ---
+function serializePokemon(p) {
+  return {
+    key: p.key,
+    level: p.level,
+    stats: { ...p.stats },
+    maxPv: p.maxPv,
+    currentPv: p.currentPv,
+    moves: p.moves.map(m => ({ ...m, name: m.name })),
+    exp: p.exp
+  };
+}
+
 function saveGame() {
   const p = gameState.playerPokemon;
   if (!p) return;
+  const activeIndex = gameState.team.indexOf(gameState.playerPokemon);
   const data = {
-    playerPokemon: {
-      key: p.key,
-      level: p.level,
-      stats: { ...p.stats },
-      maxPv: p.maxPv,
-      currentPv: p.currentPv,
-      moves: p.moves.map(m => ({ ...m, name: m.name })),
-      exp: p.exp
-    },
+    team: gameState.team.map(mon => serializePokemon(mon)),
+    activeIndex: activeIndex >= 0 ? activeIndex : 0,
     combatNumber: gameState.combatNumber,
+    inventory: { ...gameState.inventory },
+    rivalStarterKey: gameState.rivalStarterKey,
+    progressionRound: gameState.progressionRound,
+    battleType: gameState.battleType,
+    wildBattlesRemaining: gameState.wildBattlesRemaining,
+    wildBattlesTotal: gameState.wildBattlesTotal,
     lang: settings.lang,
     musicVol: settings.musicVol,
     sfxVol: settings.sfxVol
@@ -39,35 +51,68 @@ function saveGame() {
   localStorage.setItem("pokeron-save", JSON.stringify(data));
 }
 
+function rebuildPokemon(saved) {
+  const template = POKEMON_DATA[saved.key];
+  if (!template) return null;
+  return {
+    key: saved.key,
+    name: template.name,
+    type: template.type,
+    typeName: template.typeName,
+    color: template.color,
+    emoji: template.emoji,
+    level: saved.level,
+    stats: saved.stats,
+    maxPv: saved.maxPv,
+    currentPv: saved.maxPv,
+    spriteFront: template.spriteFront,
+    spriteBack: template.spriteBack,
+    spriteOffset: template.spriteOffset,
+    moves: saved.moves,
+    statModifiers: {},
+    exp: saved.exp
+  };
+}
+
 function loadGame() {
   try {
     const raw = localStorage.getItem("pokeron-save");
     if (!raw) return null;
     const data = JSON.parse(raw);
-    const p = data.playerPokemon;
-    const template = POKEMON_DATA[p.key];
-    if (!template) return null;
-    // Reconstruit l'instance complète depuis le template + la save
+
+    // Compatibilité anciens saves (un seul Pokémon)
+    if (data.playerPokemon && !data.team) {
+      const mon = rebuildPokemon(data.playerPokemon);
+      if (!mon) return null;
+      return {
+        playerPokemon: mon,
+        team: [mon],
+        combatNumber: data.combatNumber,
+        rivalStarterKey: data.rivalStarterKey,
+        progressionRound: data.progressionRound,
+        battleType: data.battleType,
+        wildBattlesRemaining: data.wildBattlesRemaining,
+        wildBattlesTotal: data.wildBattlesTotal,
+        lang: data.lang,
+        musicVol: data.musicVol,
+        sfxVol: data.sfxVol
+      };
+    }
+
+    // Nouveau format : équipe complète
+    const team = data.team.map(s => rebuildPokemon(s)).filter(Boolean);
+    if (team.length === 0) return null;
+    const activeIndex = Math.min(data.activeIndex || 0, team.length - 1);
+
     return {
-      playerPokemon: {
-        key: p.key,
-        name: template.name,
-        type: template.type,
-        typeName: template.typeName,
-        color: template.color,
-        emoji: template.emoji,
-        level: p.level,
-        stats: p.stats,
-        maxPv: p.maxPv,
-        currentPv: p.maxPv,
-        spriteFront: template.spriteFront,
-        spriteBack: template.spriteBack,
-        spriteOffset: template.spriteOffset,
-        moves: p.moves,
-        statModifiers: {},
-        exp: p.exp
-      },
+      playerPokemon: team[activeIndex],
+      team,
       combatNumber: data.combatNumber,
+      rivalStarterKey: data.rivalStarterKey,
+      progressionRound: data.progressionRound,
+      battleType: data.battleType,
+      wildBattlesRemaining: data.wildBattlesRemaining,
+      wildBattlesTotal: data.wildBattlesTotal,
       lang: data.lang,
       musicVol: data.musicVol,
       sfxVol: data.sfxVol

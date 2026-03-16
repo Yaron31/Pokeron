@@ -8,9 +8,9 @@ let starterEmbersInterval = null;
 // Pokéball — 3 images séparées + CSS filter pour la couleur
 // ==============================================
 const POKEBALL_FRAMES_SRC = [
-  "assets/images/pokeball_close.PNG",
-  "assets/images/pokeball_semi-open.PNG",
-  "assets/images/pokeball_open.PNG"
+  "assets/images/menu/pokeball_close.PNG",
+  "assets/images/menu/pokeball_semi-open.PNG",
+  "assets/images/menu/pokeball_open.PNG"
 ];
 
 // CSS hue-rotate pour chaque type (la Pokéball est rouge = hue 0°)
@@ -152,8 +152,15 @@ function selectStarter(key) {
   playPokeballOpen();
   deleteSave();
   gameState.playerPokemon = createPokemonInstance(key, 5);
+  gameState.team = [gameState.playerPokemon];
   gameState.combatNumber = 0;
-  generateEnemy();
+  gameState.inventory = { potion: Infinity, pokeball: Infinity };
+  gameState.rivalStarterKey = MATCHUPS[key];
+  gameState.progressionRound = 1;
+  gameState.battleType = "rival";
+  gameState.wildBattlesRemaining = 0;
+  gameState.wildBattlesTotal = 0;
+  generateRivalEnemy();
   transitionToBattle();
 }
 
@@ -161,17 +168,50 @@ function continueGame() {
   const save = loadGame();
   if (!save) return;
   gameState.playerPokemon = save.playerPokemon;
+  gameState.team = save.team || [gameState.playerPokemon];
   gameState.combatNumber = save.combatNumber;
-  generateEnemy();
+  gameState.inventory = { potion: Infinity, pokeball: Infinity };
+  gameState.rivalStarterKey = save.rivalStarterKey ?? MATCHUPS[save.playerPokemon.key];
+  gameState.progressionRound = save.progressionRound ?? 1;
+  gameState.battleType = save.battleType ?? "rival";
+  gameState.wildBattlesRemaining = save.wildBattlesRemaining ?? 0;
+  gameState.wildBattlesTotal = save.wildBattlesTotal ?? 0;
+  if (gameState.battleType === "wild" && gameState.wildBattlesRemaining > 0) {
+    generateWildEnemy();
+  } else {
+    generateRivalEnemy();
+  }
   transitionToBattleFromMenu();
 }
 
-function generateEnemy() {
-  const playerKey = gameState.playerPokemon.key;
-  const enemyKey = MATCHUPS[playerKey];
-  const level = gameState.playerPokemon.level;
-  gameState.enemyPokemon = createPokemonInstance(enemyKey, level);
-  gameState.combatNumber++;
+function generateWildEnemy() {
+  const avgLevel = Math.round(
+    gameState.team.reduce((s, p) => s + p.level, 0) / gameState.team.length
+  );
+  const level = Math.max(2, avgLevel + Math.floor(Math.random() * 5) - 2);
+  let key;
+  do {
+    key = WILD_POOL[Math.floor(Math.random() * WILD_POOL.length)];
+  } while (key === gameState.lastWildKey && WILD_POOL.length > 1);
+  gameState.lastWildKey = key;
+  gameState.enemyPokemon = createPokemonInstance(key, level);
+  gameState.battleType = "wild";
+}
+
+function generateRivalEnemy() {
+  const round = gameState.progressionRound;
+  const avgLevel = Math.round(gameState.team.reduce((s, p) => s + p.level, 0) / gameState.team.length);
+  const rivalLevel = Math.max(5, avgLevel + Math.min(round, 3));
+  const rivalKey = gameState.rivalStarterKey;
+  gameState.enemyPokemon = createPokemonInstance(rivalKey, rivalLevel);
+  gameState.battleType = "rival";
+}
+
+function startWildCycle() {
+  gameState.team.forEach(p => restorePokemon(p));
+  gameState.wildBattlesTotal = 3 + Math.floor(Math.random() * 4);
+  gameState.wildBattlesRemaining = gameState.wildBattlesTotal;
+  generateWildEnemy();
 }
 
 // ==============================================

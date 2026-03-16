@@ -104,7 +104,7 @@ async function processMessages() {
     await evolve(gameState.playerPokemon, evoKey);
   }
 
-  movesDiv.classList.remove("hidden");
+  // Ne plus afficher les moves ici — c'est battleLoop/showBattleMainMenu qui gère
 }
 
 function showMessage(text) {
@@ -252,8 +252,6 @@ function setupBattleUI() {
   updateHpBar("player", p);
   updateHpBar("enemy", e);
   updateXpBar(p);
-
-  renderMoveButtons();
 }
 
 const CATEGORY_ICONS = { physique: "★", speciale: "◎", statut: "☽" };
@@ -272,14 +270,14 @@ const STAT_EFFECT_MAP = {
 
 // Images individuelles par stat (patterns Gen III)
 const STAT_EFFECT_IMGS = {
-  attack:      "assets/images/stat_effects_atk.PNG",
-  defense:     "assets/images/stat_effects_def.PNG",
-  speed:       "assets/images/stat_effects_speed.PNG",
-  accuracy:    "assets/images/stat_effects_accuracy.PNG",
-  spAttack:    "assets/images/stat_effects_spe_atk.PNG",
-  spDefense:   "assets/images/stat_effects_spe_def.PNG",
-  evasiveness: "assets/images/stat_effects_evasiveness.PNG",
-  mix:         "assets/images/stat_effects_mix.PNG"
+  attack:      "assets/images/stat_effects/stat_effects_atk.PNG",
+  defense:     "assets/images/stat_effects/stat_effects_def.PNG",
+  speed:       "assets/images/stat_effects/stat_effects_speed.PNG",
+  accuracy:    "assets/images/stat_effects/stat_effects_accuracy.PNG",
+  spAttack:    "assets/images/stat_effects/stat_effects_spe_atk.PNG",
+  spDefense:   "assets/images/stat_effects/stat_effects_spe_def.PNG",
+  evasiveness: "assets/images/stat_effects/stat_effects_evasiveness.PNG",
+  mix:         "assets/images/stat_effects/stat_effects_mix.PNG"
 };
 
 function renderMoveButtons() {
@@ -301,10 +299,233 @@ function renderMoveButtons() {
       if (battlePaused) return;
       if (!gameState.battleActive) return;
       if (move.currentPp <= 0) return;
-      playerChooseMove(i);
+      resolvePlayerAction({ type: "attack", moveIndex: i });
     });
     movesDiv.appendChild(btn);
   });
+}
+
+// ==============================================
+// Animation d'entrée en combat (style FireRed)
+// ==============================================
+
+// Utilitaire : lance une animation WAAPI, attend la fin, puis commit le style final
+// dans la couche inline et annule l'animation pour éviter que fill:forwards
+// ne bloque les futurs changements de style.transform
+async function animateAndCommit(el, keyframes, options) {
+  const anim = el.animate(keyframes, { ...options, fill: "forwards" });
+  await anim.finished;
+  anim.commitStyles();
+  anim.cancel();
+  return anim;
+}
+
+async function setupBattleIntro() {
+  // Cacher les Pokémon, plateformes et infos pendant l'intro
+  document.getElementById("enemy-sprite").style.opacity = "0";
+  document.getElementById("player-sprite").style.opacity = "0";
+  document.querySelector(".enemy-platform").style.opacity = "0";
+  document.querySelector(".player-platform").style.opacity = "0";
+  document.querySelector(".enemy-info").style.opacity = "0";
+  document.querySelector(".player-info").style.opacity = "0";
+  document.getElementById("battle-moves").classList.add("hidden");
+
+  // Charger directement les sprites (fonds déjà transparents)
+  const trainerPlayer = document.getElementById("trainer-player");
+  const trainerPlayerImg = document.getElementById("trainer-player-img");
+  trainerPlayerImg.src = "assets/images/dresseur/back_player.png";
+  trainerPlayer.classList.remove("hidden");
+  trainerPlayer.style.transform = "translateX(-200%)";
+
+  const trainerRival = document.getElementById("trainer-rival");
+  const trainerRivalImg = document.getElementById("trainer-rival-img");
+  const rivalBaseImg = document.getElementById("rival-base-img");
+  trainerRivalImg.src = "assets/images/dresseur/rival_front.png";
+  rivalBaseImg.src = "assets/images/battlebase/rival_battlebase.png";
+  trainerRival.classList.remove("hidden");
+  trainerRival.style.transform = "translateX(200%)";
+}
+
+async function slideInTrainers() {
+  const trainerPlayer = document.getElementById("trainer-player");
+  const trainerRival = document.getElementById("trainer-rival");
+
+  // Slide-in simultané avec commit des styles à la fin
+  await Promise.all([
+    animateAndCommit(trainerPlayer, [
+      { transform: "translateX(-200%)" },
+      { transform: "translateX(0)" }
+    ], { duration: 800, easing: "ease-out" }),
+    animateAndCommit(trainerRival, [
+      { transform: "translateX(200%)" },
+      { transform: "translateX(0)" }
+    ], { duration: 800, easing: "ease-out" }),
+  ]);
+}
+
+async function rivalSendPokemon() {
+  const field = document.querySelector(".battle-field");
+  const trainerRival = document.getElementById("trainer-rival");
+  const enemySprite = document.getElementById("enemy-sprite");
+  const enemyPlatform = document.querySelector(".enemy-platform");
+
+  // Position de départ de la pokéball (depuis le rival)
+  const rivalRect = trainerRival.getBoundingClientRect();
+  const fieldRect = field.getBoundingClientRect();
+
+  // Créer la pokéball
+  const pokeball = document.createElement("img");
+  pokeball.src = "assets/images/menu/pokeball_close.PNG";
+  pokeball.className = "pokeball-throw";
+  pokeball.style.left = (rivalRect.left - fieldRect.left + rivalRect.width / 2) + "px";
+  pokeball.style.top = (rivalRect.top - fieldRect.top + rivalRect.height / 2) + "px";
+  field.appendChild(pokeball);
+
+  // Position cible (centre zone ennemi)
+  const targetX = fieldRect.width * 0.75;
+  const targetY = fieldRect.height * 0.45;
+  const startX = parseFloat(pokeball.style.left);
+  const startY = parseFloat(pokeball.style.top);
+  const dx = targetX - startX;
+  const dy = targetY - startY;
+
+  // Arc parabolique de la pokéball
+  const pokeAnim = pokeball.animate([
+    { transform: "translate(0, 0) rotate(0deg)", offset: 0 },
+    { transform: `translate(${dx * 0.5}px, ${dy - 80}px) rotate(360deg)`, offset: 0.4 },
+    { transform: `translate(${dx}px, ${dy}px) rotate(720deg)`, offset: 0.85 },
+    { transform: `translate(${dx}px, ${dy + 8}px) rotate(720deg)`, offset: 0.92 },
+    { transform: `translate(${dx}px, ${dy}px) rotate(720deg)`, offset: 1 },
+  ], { duration: 600, easing: "ease-in-out", fill: "forwards" });
+
+  // Slide-out du rival en parallèle (fire-and-forget, commit styles à la fin)
+  const rivalSlideOut = trainerRival.animate([
+    { transform: "translateX(0)" },
+    { transform: "translateX(200%)" }
+  ], { duration: 500, easing: "ease-in", fill: "forwards" });
+  rivalSlideOut.finished.then(() => { rivalSlideOut.commitStyles(); rivalSlideOut.cancel(); });
+
+  await pokeAnim.finished;
+
+  // Flash blanc
+  const flash = document.createElement("div");
+  flash.style.cssText = `
+    position: absolute; left: ${targetX - 40}px; top: ${targetY - 40}px;
+    width: 80px; height: 80px; background: white; border-radius: 50%;
+    z-index: 14; animation: flashBurst 350ms ease-out forwards;
+  `;
+  field.appendChild(flash);
+
+  // Supprimer la pokéball
+  pokeball.remove();
+
+  // Faire apparaître la plateforme et le Pokémon ennemi
+  enemyPlatform.style.opacity = "1";
+  enemyPlatform.style.transition = "opacity 200ms";
+
+  await delay(150);
+
+  enemySprite.style.opacity = "1";
+  enemySprite.style.animation = "pokemonAppear 400ms ease-out forwards";
+
+  // Info ennemi apparaît
+  document.querySelector(".enemy-info").style.opacity = "1";
+  document.querySelector(".enemy-info").style.transition = "opacity 300ms";
+
+  await delay(500);
+  flash.remove();
+  enemySprite.style.animation = "";
+}
+
+async function playerSendPokemon() {
+  const field = document.querySelector(".battle-field");
+  const trainerPlayer = document.getElementById("trainer-player");
+  const trainerPlayerImg = document.getElementById("trainer-player-img");
+  const playerSprite = document.getElementById("player-sprite");
+  const playerPlatform = document.querySelector(".player-platform");
+
+  // Jouer le GIF de lancer (fond déjà transparent)
+  trainerPlayerImg.src = "assets/images/dresseur/gif_player_throw_ball.gif";
+  await delay(600);
+  // Figer sur la frame actuelle pour éviter la boucle du GIF
+  try {
+    const c = document.createElement("canvas");
+    c.width = trainerPlayerImg.naturalWidth;
+    c.height = trainerPlayerImg.naturalHeight;
+    c.getContext("2d").drawImage(trainerPlayerImg, 0, 0);
+    trainerPlayerImg.src = c.toDataURL("image/png");
+  } catch (e) { /* Le GIF boucle mais sera caché par le slide-out */ }
+
+  // Position de la pokéball (depuis le joueur)
+  const playerRect = trainerPlayer.getBoundingClientRect();
+  const fieldRect = field.getBoundingClientRect();
+
+  const pokeball = document.createElement("img");
+  pokeball.src = "assets/images/menu/pokeball_close.PNG";
+  pokeball.className = "pokeball-throw";
+  pokeball.style.left = (playerRect.left - fieldRect.left + playerRect.width * 0.7) + "px";
+  pokeball.style.top = (playerRect.top - fieldRect.top + playerRect.height * 0.2) + "px";
+  field.appendChild(pokeball);
+
+  // Position cible (centre zone joueur)
+  const targetX = fieldRect.width * 0.22;
+  const targetY = fieldRect.height * 0.65;
+  const startX = parseFloat(pokeball.style.left);
+  const startY = parseFloat(pokeball.style.top);
+  const dx = targetX - startX;
+  const dy = targetY - startY;
+
+  // Arc parabolique
+  const pokeAnim = pokeball.animate([
+    { transform: "translate(0, 0) rotate(0deg)", offset: 0 },
+    { transform: `translate(${dx * 0.5}px, ${dy - 100}px) rotate(-360deg)`, offset: 0.4 },
+    { transform: `translate(${dx}px, ${dy}px) rotate(-720deg)`, offset: 0.85 },
+    { transform: `translate(${dx}px, ${dy + 8}px) rotate(-720deg)`, offset: 0.92 },
+    { transform: `translate(${dx}px, ${dy}px) rotate(-720deg)`, offset: 1 },
+  ], { duration: 600, easing: "ease-in-out", fill: "forwards" });
+
+  // Slide-out du joueur (fire-and-forget, commit styles à la fin)
+  const playerSlideOut = trainerPlayer.animate([
+    { transform: "translateX(0)" },
+    { transform: "translateX(-200%)" }
+  ], { duration: 500, easing: "ease-in", fill: "forwards" });
+  playerSlideOut.finished.then(() => { playerSlideOut.commitStyles(); playerSlideOut.cancel(); });
+
+  await pokeAnim.finished;
+
+  // Flash blanc
+  const flash = document.createElement("div");
+  flash.style.cssText = `
+    position: absolute; left: ${targetX - 40}px; top: ${targetY - 40}px;
+    width: 80px; height: 80px; background: white; border-radius: 50%;
+    z-index: 14; animation: flashBurst 350ms ease-out forwards;
+  `;
+  field.appendChild(flash);
+  pokeball.remove();
+
+  // Plateforme et Pokémon joueur
+  playerPlatform.style.opacity = "1";
+  playerPlatform.style.transition = "opacity 200ms";
+
+  await delay(150);
+
+  playerSprite.style.opacity = "1";
+  playerSprite.style.animation = "pokemonAppear 400ms ease-out forwards";
+
+  // Info joueur apparaît
+  document.querySelector(".player-info").style.opacity = "1";
+  document.querySelector(".player-info").style.transition = "opacity 300ms";
+
+  await delay(500);
+  flash.remove();
+  playerSprite.style.animation = "";
+}
+
+function cleanupBattleIntro() {
+  const trainerPlayer = document.getElementById("trainer-player");
+  const trainerRival = document.getElementById("trainer-rival");
+  if (trainerPlayer) trainerPlayer.classList.add("hidden");
+  if (trainerRival) trainerRival.classList.add("hidden");
 }
 
 // ==============================================
@@ -312,27 +533,150 @@ function renderMoveButtons() {
 // ==============================================
 async function startBattle() {
   gameState.battleActive = true;
+  gameState.combatNumber++;
   battleTheme.currentTime = 0;
   battleTheme.play().catch(() => {});
+
   setupBattleUI();
-  queueMessage(t("wildAppears", { name: pName(gameState.enemyPokemon) }));
-  await processMessages();
-  document.getElementById("battle-text").textContent =
-    t("whatWillDo", { name: pName(gameState.playerPokemon) });
+
+  if (gameState.battleType === "rival") {
+    // Intro rival complète (slide-in trainers, pokéball arc)
+    await setupBattleIntro();
+    await slideInTrainers();
+    queueMessage(t("trainerWantsBattle"));
+    await processMessages();
+    await rivalSendPokemon();
+    queueMessage(t("trainerSends", { name: pName(gameState.enemyPokemon) }));
+    await processMessages();
+    await playerSendPokemon();
+    queueMessage(t("goPlayer", { name: pName(gameState.playerPokemon) }));
+    await processMessages();
+    cleanupBattleIntro();
+  } else {
+    // Intro sauvage : Pokémon apparaît directement, pas de rival
+    await setupWildIntro();
+    queueMessage(t("wildAppears", { name: pName(gameState.enemyPokemon) }));
+    await processMessages();
+    await playerSendPokemon();
+    queueMessage(t("goPlayer", { name: pName(gameState.playerPokemon) }));
+    await processMessages();
+    cleanupBattleIntro();
+  }
+
+  gameState.battleActive = true;
+  await battleLoop();
 }
 
-async function playerChooseMove(moveIndex) {
-  if (!gameState.battleActive) return;
+async function setupWildIntro() {
+  // Cacher les éléments pendant l'intro
+  document.getElementById("enemy-sprite").style.opacity = "0";
+  document.getElementById("player-sprite").style.opacity = "0";
+  document.querySelector(".enemy-platform").style.opacity = "0";
+  document.querySelector(".player-platform").style.opacity = "0";
+  document.querySelector(".enemy-info").style.opacity = "0";
+  document.querySelector(".player-info").style.opacity = "0";
+  document.getElementById("battle-moves").classList.add("hidden");
+
+  // Pas de rival en combat sauvage
+  document.getElementById("trainer-rival").classList.add("hidden");
+
+  // Positionner le dresseur joueur (nécessaire pour l'animation de lancer)
+  const trainerPlayer = document.getElementById("trainer-player");
+  const trainerPlayerImg = document.getElementById("trainer-player-img");
+  trainerPlayerImg.src = "assets/images/dresseur/back_player.png";
+  trainerPlayer.classList.remove("hidden");
+  trainerPlayer.style.transform = "translateX(0)";
+
+  // Faire apparaître le Pokémon ennemi directement avec un fade-in
+  const enemySprite = document.getElementById("enemy-sprite");
+  const enemyPlatform = document.querySelector(".enemy-platform");
+  const enemyInfo = document.querySelector(".enemy-info");
+
+  await delay(300);
+
+  enemyPlatform.style.transition = "opacity 0.4s";
+  enemyPlatform.style.opacity = "1";
+  enemySprite.style.transition = "opacity 0.4s, transform 0.4s";
+  enemySprite.style.transform = "scale(0.3)";
+  enemySprite.style.opacity = "1";
+
+  await delay(50);
+  enemySprite.style.transform = "scale(1)";
+  await delay(400);
+
+  enemySprite.style.transition = "";
+  enemySprite.style.transform = "";
+  enemyPlatform.style.transition = "";
+
+  enemyInfo.style.transition = "opacity 0.3s";
+  enemyInfo.style.opacity = "1";
+  await delay(300);
+  enemyInfo.style.transition = "";
+}
+
+// Boucle de combat : attend une action → exécute le tour → recommence
+async function battleLoop() {
+  while (gameState.battleActive) {
+    try {
+      const action = await waitForPlayerAction();
+      const continueLoop = await executeTurn(action);
+      if (!continueLoop) break;
+    } catch (err) {
+      console.error("battleLoop error:", err);
+      if (currentScreen === "battle") gameState.battleActive = true;
+    }
+  }
+}
+
+async function executeTurn(action) {
   gameState.battleActive = false;
-
-  const movesDiv = document.getElementById("battle-moves");
-  movesDiv.classList.add("hidden");
-
-  const playerMove = gameState.playerPokemon.moves[moveIndex];
-  const aiMove = aiChooseMove(gameState.enemyPokemon, gameState.playerPokemon);
+  hideBattleMenus();
 
   const p = gameState.playerPokemon;
   const e = gameState.enemyPokemon;
+
+  if (action.type === "flee") {
+    if (gameState.battleType === "wild") {
+      await showMessage(t("fleeSuccess"));
+      await waitForClick();
+      if (gameState.wildBattlesRemaining > 0) gameState.wildBattlesRemaining--;
+      await endBattle(null);
+      return false;
+    }
+    await showMessage(t("cantFlee"));
+    await waitForClick();
+    gameState.battleActive = true;
+    return true;
+  }
+
+  if (action.type === "item") {
+    const consumed = await useItem(action.itemKey, action.targetIndex);
+    if (!consumed) { gameState.battleActive = true; return true; }
+    // Ennemi attaque après
+    if (e.currentPv > 0 && p.currentPv > 0) {
+      const aiMove = aiChooseMove(e, p);
+      await executeAttack({ mon: e, move: aiMove, target: p, isPlayer: false });
+      if (p.currentPv <= 0) { await endBattle(false); return false; }
+    }
+    gameState.battleActive = true;
+    return true;
+  }
+
+  if (action.type === "switch") {
+    await switchPokemon(action.targetIndex);
+    // Ennemi attaque après
+    if (e.currentPv > 0 && gameState.playerPokemon.currentPv > 0) {
+      const aiMove = aiChooseMove(e, gameState.playerPokemon);
+      await executeAttack({ mon: e, move: aiMove, target: gameState.playerPokemon, isPlayer: false });
+      if (gameState.playerPokemon.currentPv <= 0) { await endBattle(false); return false; }
+    }
+    gameState.battleActive = true;
+    return true;
+  }
+
+  // action.type === "attack"
+  const playerMove = p.moves[action.moveIndex];
+  const aiMove = aiChooseMove(e, p);
   const playerFirst = getEffectiveStat(p, "vitesse") >= getEffectiveStat(e, "vitesse");
 
   const first = playerFirst
@@ -342,26 +686,252 @@ async function playerChooseMove(moveIndex) {
     ? { mon: e, move: aiMove, target: p, isPlayer: false }
     : { mon: p, move: playerMove, target: e, isPlayer: true };
 
-  // Premier attaquant
   await executeAttack(first);
   if (first.target.currentPv <= 0) {
     await endBattle(first.target === e);
-    return;
+    return false;
   }
 
-  // Second attaquant
   await executeAttack(second);
   if (second.target.currentPv <= 0) {
     await endBattle(second.target === e);
-    return;
+    return false;
   }
 
-  movesDiv.classList.remove("hidden");
   gameState.battleActive = true;
-  document.getElementById("battle-text").textContent =
-    t("whatWillDo", { name: pName(p) });
-  renderMoveButtons();
+  return true;
 }
+
+// Utiliser un objet du sac
+async function useItem(itemKey, targetIndex) {
+  const item = ITEMS[itemKey];
+
+  if (item.type === "ball") {
+    if (gameState.battleType !== "wild") {
+      await showMessage(t("cantUseBall"));
+      await waitForClick();
+      return false;
+    }
+    const caught = await attemptCapture();
+    if (caught) {
+      await endBattle("captured");
+      return true;
+    }
+    return true;
+  }
+
+  const target = gameState.team[targetIndex];
+
+  if (item.healAmount) {
+    const before = target.currentPv;
+    target.currentPv = Math.min(target.maxPv, target.currentPv + item.healAmount);
+    const healed = target.currentPv - before;
+
+    await showMessage(t("usedItem", { name: pName(gameState.playerPokemon), item: itemName(itemKey) }));
+    await waitForClick();
+
+    if (healed > 0) {
+      await showMessage(t("healedHp", { name: pName(target), amount: healed }));
+      updateHpBar("player", gameState.playerPokemon);
+      await waitForClick();
+    }
+  }
+
+  return true;
+}
+
+// ==============================================
+// Capture de Pokémon sauvage
+// ==============================================
+async function attemptCapture() {
+  const e = gameState.enemyPokemon;
+  const data = POKEMON_DATA[e.key];
+  const catchRate = data.catchRate || 127;
+
+  // Formule Gen3 simplifiée : plus les PV sont bas, plus c'est facile
+  const hpFactor = (3 * e.maxPv - 2 * e.currentPv) / (3 * e.maxPv);
+  const modifiedRate = catchRate * hpFactor;
+  const shakeChance = modifiedRate / 255;
+
+  // Calculer combien de shakes réussis (0-3)
+  let shakes = 0;
+  for (let i = 0; i < 3; i++) {
+    if (Math.random() < shakeChance) shakes++;
+    else break;
+  }
+  const caught = shakes === 3;
+
+  // Animation de la pokéball
+  await animateCapture(shakes, caught);
+
+  if (caught) {
+    await showMessage(t("pokemonCaught", { name: pName(e) }));
+    await waitForClick();
+    return true;
+  } else {
+    await showMessage(t("pokemonBrokeFree"));
+    await waitForClick();
+    return false;
+  }
+}
+
+async function animateCapture(shakes, caught) {
+  const field = document.querySelector(".battle-field");
+  const fieldRect = field.getBoundingClientRect();
+  const enemySprite = document.getElementById("enemy-sprite");
+  const enemyPlatform = document.querySelector(".enemy-platform");
+  const platformRect = enemyPlatform.getBoundingClientRect();
+
+  // Slide-in du dresseur joueur puis GIF de lancer
+  const trainerPlayer = document.getElementById("trainer-player");
+  const trainerPlayerImg = document.getElementById("trainer-player-img");
+  trainerPlayer.classList.remove("hidden");
+  trainerPlayer.style.transform = "translateX(-200%)";
+  trainerPlayerImg.src = "assets/images/dresseur/back_player.png";
+
+  await animateAndCommit(trainerPlayer, [
+    { transform: "translateX(-200%)" },
+    { transform: "translateX(0)" }
+  ], { duration: 400, easing: "ease-out" });
+
+  trainerPlayerImg.src = "assets/images/dresseur/gif_player_throw_ball.gif";
+  await delay(600);
+  // Figer le GIF
+  try {
+    const c = document.createElement("canvas");
+    c.width = trainerPlayerImg.naturalWidth;
+    c.height = trainerPlayerImg.naturalHeight;
+    c.getContext("2d").drawImage(trainerPlayerImg, 0, 0);
+    trainerPlayerImg.src = c.toDataURL("image/png");
+  } catch (e) {}
+
+  // Position de départ depuis le sprite du dresseur
+  const playerRect = trainerPlayer.getBoundingClientRect();
+  const startX = playerRect.left - fieldRect.left + playerRect.width * 0.7;
+  const startY = playerRect.top - fieldRect.top + playerRect.height * 0.2;
+
+  // Cible : centre de la battlebase ennemie
+  const targetX = platformRect.left - fieldRect.left + platformRect.width / 2;
+  const targetY = platformRect.top - fieldRect.top + platformRect.height * 0.4;
+
+  // Créer la pokéball
+  const pokeball = document.createElement("img");
+  pokeball.src = "assets/images/menu/pokeball_close.PNG";
+  pokeball.className = "pokeball-throw";
+  pokeball.style.left = startX + "px";
+  pokeball.style.top = startY + "px";
+  field.appendChild(pokeball);
+
+  // Arc parabolique vers la battlebase (plus lent : 900ms)
+  const dx = targetX - startX;
+  const dy = targetY - startY;
+  const arcAnim = pokeball.animate([
+    { transform: "translate(0, 0) rotate(0deg)", offset: 0 },
+    { transform: `translate(${dx * 0.5}px, ${dy - 120}px) rotate(360deg)`, offset: 0.4 },
+    { transform: `translate(${dx}px, ${dy}px) rotate(720deg)`, offset: 0.85 },
+    { transform: `translate(${dx}px, ${dy + 8}px) rotate(720deg)`, offset: 0.92 },
+    { transform: `translate(${dx}px, ${dy}px) rotate(720deg)`, offset: 1 }
+  ], { duration: 900, easing: "ease-in-out", fill: "forwards" });
+
+  // Cacher le dresseur pendant l'arc
+  const slideOut = trainerPlayer.animate([
+    { transform: "translateX(0)" },
+    { transform: "translateX(-200%)" }
+  ], { duration: 500, easing: "ease-in", fill: "forwards" });
+  slideOut.finished.then(() => {
+    slideOut.commitStyles();
+    slideOut.cancel();
+    trainerPlayer.classList.add("hidden");
+  });
+
+  await arcAnim.finished;
+
+  // Flash blanc + ennemi disparaît dans la ball
+  const flash = document.createElement("div");
+  flash.style.cssText = `
+    position: absolute; left: ${targetX - 40}px; top: ${targetY - 40}px;
+    width: 80px; height: 80px; background: white; border-radius: 50%;
+    z-index: 14; animation: flashBurst 350ms ease-out forwards;
+  `;
+  field.appendChild(flash);
+
+  enemySprite.style.transition = "opacity 0.2s, transform 0.2s";
+  enemySprite.style.opacity = "0";
+  enemySprite.style.transform = "scale(0.1)";
+  await delay(350);
+  flash.remove();
+  enemySprite.style.transition = "";
+
+  // Repositionner la pokéball sur la battlebase
+  pokeball.getAnimations().forEach(a => a.cancel());
+  pokeball.style.left = (targetX - 14) + "px";
+  pokeball.style.top = targetY + "px";
+  pokeball.style.transform = "";
+
+  // Secousses (0 à 3)
+  for (let i = 0; i < shakes; i++) {
+    await delay(500);
+    const shakeAnim = pokeball.animate([
+      { transform: "rotate(0deg)" },
+      { transform: "rotate(-20deg)" },
+      { transform: "rotate(20deg)" },
+      { transform: "rotate(-10deg)" },
+      { transform: "rotate(0deg)" }
+    ], { duration: 400, easing: "ease-in-out" });
+    await shakeAnim.finished;
+  }
+
+  if (caught) {
+    await delay(400);
+    pokeball.remove();
+  } else {
+    await delay(300);
+    pokeball.remove();
+    enemySprite.style.transition = "opacity 0.3s, transform 0.3s";
+    enemySprite.style.opacity = "1";
+    enemySprite.style.transform = "scale(1)";
+    await delay(300);
+    enemySprite.style.transition = "";
+    enemySprite.style.transform = "";
+  }
+}
+
+// Changer de Pokémon
+async function switchPokemon(targetIndex) {
+  const old = gameState.playerPokemon;
+  const next = gameState.team[targetIndex];
+
+  await showMessage(t("comeBack", { name: pName(old) }));
+  await waitForClick();
+
+  // Animation : sprite disparaît
+  const playerSprite = document.getElementById("player-sprite");
+  playerSprite.style.transition = "opacity 0.3s, transform 0.3s";
+  playerSprite.style.opacity = "0";
+  playerSprite.style.transform = "scale(0.3)";
+  await delay(350);
+
+  // Changer le pokémon actif
+  gameState.playerPokemon = next;
+  next.statModifiers = {};
+
+  // Mettre à jour UI
+  setupBattleUI();
+
+  // Animation : nouveau sprite apparaît
+  playerSprite.style.transform = "scale(0.3)";
+  playerSprite.style.opacity = "0";
+  await delay(50);
+  playerSprite.style.opacity = "1";
+  playerSprite.style.transform = "scale(1)";
+  await delay(350);
+  playerSprite.style.transition = "";
+  playerSprite.style.transform = "";
+
+  await showMessage(t("goPlayer", { name: pName(next) }));
+  await waitForClick();
+}
+
 
 const ATTACK_SLIDE_MS = 350;
 const HIT_ANIM_MS = 400;
@@ -652,7 +1222,55 @@ function showMoveReplacementUI(pokemon, newMove) {
 // ==============================================
 async function endBattle(playerWon) {
   gameState.battleActive = false;
+  hideBattleMenus();
   fadeOutAudio(battleTheme, 500);
+
+  if (playerWon === null) {
+    // Fuite — pas d'XP, transition directe
+    showResult(null);
+    return;
+  }
+
+  // Capture réussie
+  if (playerWon === "captured") {
+    setTimeout(() => {
+      victoryTheme.currentTime = 0;
+      victoryTheme.play().catch(() => {});
+    }, 500);
+
+    if (gameState.battleType === "wild") {
+      gameState.wildBattlesRemaining--;
+    }
+
+    const captured = gameState.enemyPokemon;
+    captured.statModifiers = {};
+
+    if (gameState.team.length < 6) {
+      gameState.team.push(captured);
+      await showMessage(t("pokemonAddedToTeam", { name: pName(captured) }));
+      await waitForClick();
+    } else {
+      await showMessage(t("teamFull", { name: pName(captured) }));
+      await waitForClick();
+      const replaceIndex = await promptTeamReplace(captured);
+      if (replaceIndex >= 0) {
+        const released = gameState.team[replaceIndex];
+        gameState.team[replaceIndex] = captured;
+        if (gameState.playerPokemon === released) {
+          gameState.playerPokemon = captured;
+        }
+        await showMessage(t("pokemonReplaced", { old: pName(released), new: pName(captured) }));
+        await waitForClick();
+      } else {
+        await showMessage(t("pokemonReleased", { name: pName(captured) }));
+        await waitForClick();
+      }
+    }
+
+    saveGame();
+    showResult(true);
+    return;
+  }
 
   if (playerWon) {
     setTimeout(() => {
@@ -663,11 +1281,65 @@ async function endBattle(playerWon) {
     const e = gameState.enemyPokemon;
     await gainExp(p, e.level);
     await processMessages();
+
+    if (gameState.battleType === "wild") {
+      gameState.wildBattlesRemaining--;
+    }
     saveGame();
     showResult(true);
   } else {
     showResult(false);
   }
+}
+
+// Prompt de remplacement d'équipe (quand équipe pleine après capture)
+function promptTeamReplace(newPokemon) {
+  return new Promise(resolve => {
+    const panel = document.getElementById("battle-team-panel");
+    const prompt = panel.querySelector(".team-prompt");
+    const cancelBtn = panel.querySelector(".team-cancel-btn");
+
+    prompt.textContent = t("replacePrompt");
+    cancelBtn.textContent = t("releasePokemon");
+
+    // Rendre les slots
+    for (let i = 0; i < 6; i++) {
+      const slot = document.getElementById("team-slot-" + i);
+      const mon = gameState.team[i];
+      if (!mon) {
+        slot.innerHTML = "";
+        slot.classList.add("empty");
+        continue;
+      }
+      slot.classList.remove("empty", "fainted", "selected");
+      slot.innerHTML = renderSlotContent(mon, mon === gameState.playerPokemon);
+
+      slot.onclick = () => {
+        panel.classList.add("hidden");
+        cleanupReplaceListeners();
+        resolve(i);
+      };
+    }
+
+    const onCancel = () => {
+      panel.classList.add("hidden");
+      cleanupReplaceListeners();
+      resolve(-1);
+    };
+    cancelBtn.onclick = onCancel;
+
+    function cleanupReplaceListeners() {
+      for (let i = 0; i < 6; i++) {
+        document.getElementById("team-slot-" + i).onclick = null;
+      }
+      cancelBtn.onclick = null;
+      // Restaurer le texte original
+      prompt.textContent = t("chooseAPokemon");
+      cancelBtn.textContent = t("cancel");
+    }
+
+    panel.classList.remove("hidden");
+  });
 }
 
 function showResult(won) {
@@ -678,35 +1350,8 @@ function showResult(won) {
   summaryEl.innerHTML = "";
   buttonsEl.innerHTML = "";
 
-  if (won) {
-    const p = gameState.playerPokemon;
-    titleEl.textContent = t("victory");
-
-    summaryEl.innerHTML = `
-      <div class="result-pokemon-line">${pName(p)} ${t("levelAbbr")}${p.level}</div>
-      <div class="result-battle-count">${t("battleCount", { count: gameState.combatNumber })}</div>
-      <div class="result-saved-msg" id="saved-msg">${t("saved")}</div>
-    `;
-
-    const nextBtn = createResultBtn(t("nextBattle"), false, () => {
-      restorePokemon(p);
-      generateEnemy();
-      transitionToBattleFromResult();
-    });
-    const saveBtn = createResultBtn(t("save"), true, () => {
-      saveGame();
-      const msg = document.getElementById("saved-msg");
-      if (msg) { msg.classList.add("visible"); setTimeout(() => msg.classList.remove("visible"), 2000); }
-    });
-    const optBtn = createResultBtn(t("options"), true, () => {
-      transitionToMenu();
-    });
-    const menuBtn = createResultBtn(t("backToMenu"), true, () => {
-      transitionToMenu();
-    });
-
-    buttonsEl.append(nextBtn, saveBtn, optBtn, menuBtn);
-  } else {
+  // --- Défaite ---
+  if (won === false) {
     playDefeatSound();
     titleEl.textContent = t("defeat");
     summaryEl.innerHTML = `
@@ -716,8 +1361,86 @@ function showResult(won) {
       </div>
     `;
     buttonsEl.append(createResultBtn(t("backToMenu"), false, () => transitionToMenu()));
+    transitionToResult();
+    return;
   }
 
+  // --- Fuite (won === null) ou Victoire (won === true) ---
+  const p = gameState.playerPokemon;
+
+  if (won === true) {
+    titleEl.textContent = t("victory");
+  } else {
+    titleEl.textContent = "";
+  }
+
+  // Victoire rival → round terminé, lancer cycle sauvage
+  if (won === true && gameState.battleType === "rival") {
+    const round = gameState.progressionRound;
+    summaryEl.innerHTML = `
+      <div class="result-pokemon-line">${pName(p)} ${t("levelAbbr")}${p.level}</div>
+      <div class="result-battle-count">${t("roundComplete", { round })}</div>
+      <div class="result-saved-msg" id="saved-msg">${t("saved")}</div>
+    `;
+    gameState.progressionRound++;
+    saveGame();
+
+    const nextBtn = createResultBtn(t("continueAdventure"), false, () => {
+      startWildCycle();
+      transitionToBattleFromResult();
+    });
+    const saveBtn = createResultBtn(t("save"), true, () => {
+      saveGame();
+      const msg = document.getElementById("saved-msg");
+      if (msg) { msg.classList.add("visible"); setTimeout(() => msg.classList.remove("visible"), 2000); }
+    });
+    const menuBtn = createResultBtn(t("backToMenu"), true, () => transitionToMenu());
+    buttonsEl.append(nextBtn, saveBtn, menuBtn);
+    transitionToResult();
+    return;
+  }
+
+  // Victoire/fuite sauvage — combats restants ?
+  if (gameState.battleType === "wild") {
+    if (gameState.wildBattlesRemaining > 0) {
+      // Encore des combats sauvages
+      summaryEl.innerHTML = `
+        <div class="result-pokemon-line">${won ? pName(p) + " " + t("levelAbbr") + p.level : ""}</div>
+        <div class="result-battle-count">${t("wildBattlesLeft", { count: gameState.wildBattlesRemaining })}</div>
+      `;
+      const nextBtn = createResultBtn(t("nextWildBattle"), false, () => {
+        generateWildEnemy();
+        transitionToBattleFromResult();
+      });
+      const menuBtn = createResultBtn(t("backToMenu"), true, () => transitionToMenu());
+      buttonsEl.append(nextBtn, menuBtn);
+    } else {
+      // Plus de combats sauvages → soin auto → rival
+      gameState.team.forEach(pk => restorePokemon(pk));
+      saveGame();
+
+      summaryEl.innerHTML = `
+        <div class="result-pokemon-line">${won ? pName(p) + " " + t("levelAbbr") + p.level : ""}</div>
+        <div class="result-battle-count">${t("teamHealed")}</div>
+        <div class="result-saved-msg" id="saved-msg">${t("saved")}</div>
+      `;
+      const nextBtn = createResultBtn(t("faceRival"), false, () => {
+        generateRivalEnemy();
+        transitionToBattleFromResult();
+      });
+      const saveBtn = createResultBtn(t("save"), true, () => {
+        saveGame();
+        const msg = document.getElementById("saved-msg");
+        if (msg) { msg.classList.add("visible"); setTimeout(() => msg.classList.remove("visible"), 2000); }
+      });
+      const menuBtn = createResultBtn(t("backToMenu"), true, () => transitionToMenu());
+      buttonsEl.append(nextBtn, saveBtn, menuBtn);
+    }
+    transitionToResult();
+    return;
+  }
+
+  // Fallback (ne devrait pas arriver)
   transitionToResult();
 }
 

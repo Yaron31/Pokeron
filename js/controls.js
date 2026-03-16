@@ -101,7 +101,7 @@ document.addEventListener("keydown", (e) => {
   }
 
   if (currentScreen === "battle") {
-    // Menu pause
+    // Menu pause — ESC uniquement si pas dans un sous-menu combat
     if (e.key === "Escape") {
       e.preventDefault();
       if (pauseOpen) {
@@ -113,15 +113,20 @@ document.addEventListener("keydown", (e) => {
         } else {
           closePause();
         }
-      } else {
-        openPause();
+        return;
       }
+      // Si dans un sous-menu combat (moves/bag/team), ESC retourne au menu principal
+      if (battleMenuState === "moves" || battleMenuState === "bag" || battleMenuState === "team") {
+        handleBattleMenuKey(e);
+        return;
+      }
+      // Sinon ouvrir la pause
+      openPause();
       return;
     }
 
     // Navigation pause
     if (pauseOpen) {
-      // Sous-menu options
       if (pauseOptionsOpen) {
         switch (e.key) {
           case "ArrowUp":
@@ -162,7 +167,7 @@ document.addEventListener("keydown", (e) => {
         case "ArrowRight":
           if (quitConfirmOpen) {
             e.preventDefault();
-            navigatePause(0); // toggle OUI/NON
+            navigatePause(0);
           }
           break;
         case "Enter":
@@ -174,21 +179,28 @@ document.addEventListener("keydown", (e) => {
       return;
     }
 
-    // Raccourcis combat
-    if (gameState.battleActive) {
-      const moves = gameState.playerPokemon.moves;
-      if (e.key === "1" && moves[0] && moves[0].currentPp > 0) {
-        e.preventDefault();
-        playerChooseMove(0);
-      } else if (e.key === "2" && moves[1] && moves[1].currentPp > 0) {
-        e.preventDefault();
-        playerChooseMove(1);
-      } else if (e.key === "3" && moves[2] && moves[2].currentPp > 0) {
-        e.preventDefault();
-        playerChooseMove(2);
-      } else if (e.key === "4" && moves[3] && moves[3].currentPp > 0) {
-        e.preventDefault();
-        playerChooseMove(3);
+    // Navigation menu combat (main/moves/bag/team)
+    if (gameState.battleActive && battleMenuState !== "none") {
+      // D'abord laisser le menu gérer
+      const handled = handleBattleMenuKey(e);
+      if (handled) return;
+
+      // Raccourcis 1-4 en mode "moves" uniquement
+      if (battleMenuState === "moves") {
+        const moves = gameState.playerPokemon.moves;
+        if (e.key === "1" && moves[0] && moves[0].currentPp > 0) {
+          e.preventDefault();
+          resolvePlayerAction({ type: "attack", moveIndex: 0 });
+        } else if (e.key === "2" && moves[1] && moves[1].currentPp > 0) {
+          e.preventDefault();
+          resolvePlayerAction({ type: "attack", moveIndex: 1 });
+        } else if (e.key === "3" && moves[2] && moves[2].currentPp > 0) {
+          e.preventDefault();
+          resolvePlayerAction({ type: "attack", moveIndex: 2 });
+        } else if (e.key === "4" && moves[3] && moves[3].currentPp > 0) {
+          e.preventDefault();
+          resolvePlayerAction({ type: "attack", moveIndex: 3 });
+        }
       }
     }
   }

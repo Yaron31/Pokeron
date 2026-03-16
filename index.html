@@ -35,7 +35,7 @@
 
     <!-- Sprite Dracaufeu — AU CENTRE -->
     <div class="sprite-container intro-sprite">
-      <img id="charizard-sprite" class="sprite" src="assets/images/my-charizard-pixel-art-v0-yiq8er3t0bm91.webp" alt="Dracaufeu">
+      <img id="charizard-sprite" class="sprite" src="assets/images/menu/my-charizard-pixel-art-v0-yiq8er3t0bm91.webp" alt="Dracaufeu">
     </div>
 
     <!-- Effet de rugissement (flash + secousse via JS) -->
@@ -103,6 +103,15 @@
   <div id="battle-screen" class="screen">
     <div class="battle-bg"></div>
     <div class="battle-field">
+      <!-- Dresseurs (intro de combat) -->
+      <div id="trainer-player" class="trainer-sprite trainer-player hidden">
+        <img id="trainer-player-img" class="sprite-img" src="" alt="Player">
+      </div>
+      <div id="trainer-rival" class="trainer-sprite trainer-rival hidden">
+        <img id="trainer-rival-img" class="sprite-img" src="" alt="Rival">
+        <img id="rival-base-img" class="trainer-base-img" src="" alt="">
+      </div>
+
       <!-- Info ennemi : au-dessus du sprite ennemi (HAUT-DROITE) -->
       <div class="battle-info enemy-info">
         <span class="battle-name" id="enemy-name"></span>
@@ -115,11 +124,11 @@
 
       <!-- Sprite ennemi : HAUT-DROITE -->
       <div class="pokemon-sprite enemy-sprite" id="enemy-sprite"></div>
-      <img class="grass-platform enemy-platform" src="assets/images/grass_battlebase.png" alt="">
+      <img class="grass-platform enemy-platform" src="assets/images/battlebase/grass_battlebase.png" alt="">
 
       <!-- Sprite joueur : BAS-GAUCHE -->
       <div class="pokemon-sprite player-sprite" id="player-sprite"></div>
-      <img class="grass-platform player-platform" src="assets/images/grass_battlebase.png" alt="">
+      <img class="grass-platform player-platform" src="assets/images/battlebase/grass_battlebase.png" alt="">
 
       <!-- Info joueur : au-dessus du sprite joueur (GAUCHE) -->
       <div class="battle-info player-info">
@@ -138,7 +147,58 @@
     <div class="battle-textbox" id="battle-textbox">
       <p id="battle-text"></p>
     </div>
+    <div class="battle-main-menu hidden" id="battle-main-menu">
+      <button class="menu-choice selected" data-choice="attack">
+        <span data-i18n="battleAttack">ATTAQUE</span>
+      </button>
+      <button class="menu-choice" data-choice="bag">
+        <span data-i18n="battleBag">SAC</span>
+      </button>
+      <button class="menu-choice" data-choice="pokemon">
+        <span data-i18n="battlePokemon">POKÉMON</span>
+      </button>
+      <button class="menu-choice" data-choice="flee">
+        <span data-i18n="battleFlee">FUITE</span>
+      </button>
+    </div>
     <div class="battle-moves" id="battle-moves"></div>
+
+    <!-- Panneau Sac (style DS) -->
+    <div class="battle-bag-panel hidden" id="battle-bag-panel">
+      <div class="bag-box">
+        <div class="bag-header">
+          <img class="bag-pocket-icon" src="assets/images/item/potion.png" alt="">
+          <span class="bag-pocket-name" data-i18n="bagPocketMedicine">MÉDICAMENTS</span>
+        </div>
+        <div class="bag-list-container">
+          <ul id="bag-item-list"></ul>
+        </div>
+        <div class="bag-description" id="bag-description"></div>
+        <div class="bag-bottom-bar">
+          <button class="bag-back-btn" data-i18n="back">RETOUR</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panneau Équipe (style FireRed) -->
+    <div class="battle-team-panel hidden" id="battle-team-panel">
+      <div class="team-box">
+        <div class="team-slots">
+          <div class="team-slot team-slot-active" id="team-slot-0"></div>
+          <div class="team-slots-right">
+            <div class="team-slot" id="team-slot-1"></div>
+            <div class="team-slot" id="team-slot-2"></div>
+            <div class="team-slot" id="team-slot-3"></div>
+            <div class="team-slot" id="team-slot-4"></div>
+            <div class="team-slot" id="team-slot-5"></div>
+          </div>
+        </div>
+        <div class="team-bottom-bar">
+          <span class="team-prompt" data-i18n="chooseAPokemon">Choisis un Pokémon.</span>
+          <button class="team-cancel-btn" data-i18n="cancel">ANNULER</button>
+        </div>
+      </div>
+    </div>
 
     <!-- Panneau stat gains (level up) -->
     <div id="stat-gains-popup" class="stat-gains-popup hidden">
@@ -209,7 +269,9 @@
   <script src="js/ui.js"></script>
   <script src="js/starter.js"></script>
   <script src="js/battle.js"></script>
+  <script src="js/battle-menu.js"></script>
   <script src="js/pause.js"></script>
   <script src="js/controls.js"></script>
+  <script src="js/debug-overlay.js"></script>
 </body>
 </html>

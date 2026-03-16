@@ -620,6 +620,11 @@ body {
 .type-plante { background: #78C850; color: #fff; }
 .type-normal { background: #A8A878; color: #fff; }
 .type-dragon { background: #7038F8; color: #fff; }
+.type-vol { background: #A890F0; color: #fff; }
+.type-electrik { background: #F8D030; color: #fff; }
+.type-insecte { background: #A8B820; color: #fff; }
+.type-roche { background: #B8A038; color: #fff; }
+.type-psy { background: #F85888; color: #fff; }
 
 /* ==============================================
    ÉCRAN DE COMBAT — Style Pokémon Rouge Feu GBA
@@ -628,33 +633,91 @@ body {
   flex-direction: column;
 }
 
-/* --- Fond : ciel + herbe GBA --- */
+/* --- Fond : ciel + forêt + herbe GBA --- */
 .battle-bg {
   position: absolute;
   inset: 0;
   background:
     linear-gradient(to bottom,
       #58B8E8 0%,
-      #78D0F0 25%,
-      #90E0A0 33%,
+      #78D0F0 28%,
+      #88D8A0 33%,
       #78C850 38%,
       #60A838 55%,
       #488828 100%
     );
   z-index: -1;
+  overflow: hidden;
 }
+
+/* Bande de transition ciel/herbe */
 .battle-bg::before {
   content: "";
   position: absolute;
   left: 0; right: 0;
   top: 33%;
-  height: 8px;
+  height: 12px;
   background: repeating-linear-gradient(
     90deg,
     #90D860 0px, #90D860 6px,
     #70B840 6px, #70B840 12px
   );
   image-rendering: pixelated;
+  z-index: 0;
+}
+
+/* --- Dresseurs (intro combat) --- */
+.trainer-sprite {
+  position: absolute;
+  z-index: 6;
+  pointer-events: none;
+}
+.trainer-sprite.hidden {
+  display: none;
+}
+.trainer-player {
+  bottom: -28px;
+  left: 26px;
+  width: clamp(200px, 42vw, 340px);
+  height: clamp(200px, 42vw, 340px);
+}
+.trainer-rival {
+  top: 64px;
+  right: 275px;
+  width: 250px;
+  height: 250px;
+}
+.trainer-base-img {
+  position: absolute;
+  bottom: -35px;
+  left: -2px;
+  width: 280px;
+  image-rendering: pixelated;
+  z-index: -1;
+}
+
+/* Pokéball en vol */
+.pokeball-throw {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  z-index: 15;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+/* Flash blanc d'apparition Pokémon */
+@keyframes flashBurst {
+  0%   { transform: scale(0.3); opacity: 1; }
+  50%  { transform: scale(2); opacity: 0.8; }
+  100% { transform: scale(3.5); opacity: 0; }
+}
+
+/* Pokémon apparition (scale up) */
+@keyframes pokemonAppear {
+  0%   { transform: scale(0) translateY(20px); opacity: 0; }
+  60%  { transform: scale(1.1) translateY(-5px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
 }
 
 /* --- Terrain de combat --- */
@@ -863,11 +926,377 @@ body {
   text-align: left;
 }
 
+/* --- Menu principal combat (2x2) --- */
+.battle-main-menu {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  z-index: 11;
+  background: #F8F0D0;
+  border: 3px solid #000000;
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.battle-main-menu.hidden {
+  display: none;
+}
+
+.menu-choice {
+  font-family: "Press Start 2P", monospace;
+  font-size: clamp(11px, 1.5vw, 14px);
+  padding: 14px 24px;
+  border: 2px solid rgba(0, 0, 0, 0.317);
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: center;
+  transition: filter 0.1s, transform 0.1s;
+  white-space: nowrap;
+}
+
+.menu-choice[data-choice="attack"]  { background: #d00000; color:#fff; }
+.menu-choice[data-choice="bag"]     { background: #ebae20; color: #fff; }
+.menu-choice[data-choice="pokemon"] { background: #3aab3a; color: #fff; }
+.menu-choice[data-choice="flee"]    { background: #065eb5; color: #fff; }
+
+.menu-choice.selected {
+  filter: brightness(1.25);
+  transform: scale(1.05);
+}
+
+.menu-choice:active {
+  filter: brightness(0.9);
+  transform: scale(0.97);
+}
+
+/* --- Panneau Sac --- */
+/* --- Panneau Sac (style Pokémon DS) --- */
+.battle-bag-panel {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 20;
+  display: flex;
+}
+
+.battle-bag-panel.hidden {
+  display: none;
+}
+
+.bag-box {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, #2D5A3D 0%, #1A3A25 100%);
+  display: flex;
+  flex-direction: column;
+  font-family: "Press Start 2P", monospace;
+}
+
+.bag-header {
+  background: #3A7A52;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border-bottom: 3px solid #245A38;
+}
+
+.bag-pocket-icon {
+  width: clamp(20px, 2.5vw, 28px);
+  height: clamp(20px, 2.5vw, 28px);
+  image-rendering: pixelated;
+}
+
+.bag-pocket-name {
+  font-size: clamp(11px, 1.4vw, 15px);
+  color: #F0F0E0;
+  letter-spacing: 2px;
+}
+
+.bag-list-container {
+  flex: 1;
+  overflow-y: auto;
+  margin: 12px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+#bag-item-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#bag-item-list li {
+  padding: 10px 12px;
+  margin-bottom: 4px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: clamp(9px, 1.2vw, 12px);
+  color: #E8E0C8;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: background 0.15s;
+}
+
+#bag-item-list li.selected {
+  background: #4A9A62;
+}
+
+#bag-item-list li.disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.bag-item-icon {
+  width: 24px;
+  height: 24px;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
+
+.bag-item-qty {
+  margin-left: auto;
+  color: #B8D0B0;
+  font-size: clamp(8px, 1vw, 11px);
+}
+
+.bag-description {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin: 0 16px 10px;
+  min-height: 44px;
+  font-size: clamp(8px, 1vw, 10px);
+  color: #D0D8C8;
+  line-height: 1.6;
+}
+
+.bag-bottom-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 16px 12px;
+}
+
+.bag-back-btn {
+  font-family: "Press Start 2P", monospace;
+  font-size: clamp(9px, 1.1vw, 11px);
+  padding: 8px 18px;
+  border: 2px solid #2A4A35;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #4A6A55;
+  color: #E8E0C8;
+  transition: filter 0.15s;
+}
+
+.bag-back-btn:hover {
+  filter: brightness(1.2);
+}
+
+/* --- Panneau Équipe --- */
+/* --- Panneau Équipe (style FireRed) --- */
+.battle-team-panel {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 20;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+.battle-team-panel.hidden {
+  display: none;
+}
+
+.team-box {
+  width: 100%;
+  height: 100%;
+  background: #3B6DAA;
+  font-family: "Press Start 2P", monospace;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  gap: 8px;
+}
+
+/* Layout : slot actif à gauche, 5 slots à droite */
+.team-slots {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  min-height: 0;
+}
+
+.team-slot-active {
+  grid-row: 1 / -1;
+}
+
+.team-slots-right {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Slot commun */
+.team-slot {
+  background: #4A7BA8;
+  border: 3px solid #2A5A88;
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  font-size: clamp(8px, 1vw, 10px);
+  min-height: 40px;
+}
+
+.team-slot:hover,
+.team-slot.selected {
+  border-color: #F08030;
+  background: #5A8FBF;
+}
+
+.team-slot.empty {
+  background: #3A6A98;
+  border-color: #2A5A88;
+  cursor: default;
+  opacity: 0.4;
+}
+
+.team-slot.fainted {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* Slot actif (grand, à gauche) */
+.team-slot.team-slot-active {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #5A8FBF;
+  border-color: #F08030;
+  font-size: clamp(9px, 1.2vw, 11px);
+  text-align: center;
+}
+
+.team-slot.team-slot-active .team-slot-sprite {
+  width: 64px;
+  height: 64px;
+}
+
+/* Sprite mini */
+.team-slot-sprite {
+  width: 40px;
+  height: 40px;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
+
+/* Infos dans le slot */
+.team-slot-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.team-slot-name {
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.team-slot-level {
+  font-size: clamp(7px, 0.9vw, 9px);
+  color: #C8D8F0;
+  margin-top: 2px;
+}
+
+/* Barre HP style FireRed */
+.team-hp-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.team-hp-label {
+  font-size: clamp(6px, 0.7vw, 8px);
+  color: #FFD700;
+  flex-shrink: 0;
+}
+
+.team-hp-bar {
+  flex: 1;
+  height: 5px;
+  background: #1A3A5A;
+  border-radius: 2px;
+  overflow: hidden;
+  border: 1px solid #0A2A4A;
+}
+
+.team-hp-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.team-hp-text {
+  font-size: clamp(7px, 0.8vw, 9px);
+  color: #C8D8F0;
+  text-align: right;
+  margin-top: 2px;
+}
+
+/* Barre du bas */
+.team-bottom-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #2A4A6A;
+  border: 2px solid #1A3A5A;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.team-prompt {
+  color: #fff;
+  font-size: clamp(8px, 1vw, 10px);
+  font-family: "Press Start 2P", monospace;
+}
+
+.team-cancel-btn {
+  font-family: "Press Start 2P", monospace;
+  font-size: clamp(8px, 1vw, 10px);
+  padding: 6px 14px;
+  background: #4080C0;
+  color: #fff;
+  border: 2px solid #2A5A88;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.team-cancel-btn:hover {
+  background: #5090D0;
+}
+
 /* --- Boutons d'attaque --- */
 .battle-moves {
   position: absolute;
   bottom: 20px;
-  right: 0;
+  right: 20px;
   width: auto;
   display: grid;
   grid-template-columns: 1fr;
@@ -899,7 +1328,7 @@ body {
 }
 
 .move-btn:hover {
-  background: #E8DFC0;
+  background: #ffe179;
 }
 
 .move-btn:active {
@@ -952,6 +1381,11 @@ body {
 .move-type-label.type-poison   { background: #A040A0; }
 .move-type-label.type-tenebres { background: #705848; }
 .move-type-label.type-acier    { background: #B8B8D0; }
+.move-type-label.type-vol      { background: #A890F0; }
+.move-type-label.type-electrik { background: #F8D030; }
+.move-type-label.type-insecte  { background: #A8B820; }
+.move-type-label.type-roche    { background: #B8A038; }
+.move-type-label.type-psy      { background: #F85888; }
 
 /* Bordures colorées par type */
 .move-btn.type-feu      { border-color: #F08030; }
@@ -962,6 +1396,11 @@ body {
 .move-btn.type-poison   { border-color: #A040A0; }
 .move-btn.type-tenebres { border-color: #705848; }
 .move-btn.type-acier    { border-color: #B8B8D0; }
+.move-btn.type-vol      { border-color: #A890F0; }
+.move-btn.type-electrik { border-color: #F8D030; }
+.move-btn.type-insecte  { border-color: #A8B820; }
+.move-btn.type-roche    { border-color: #B8A038; }
+.move-btn.type-psy      { border-color: #F85888; }
 
 /* --- Animations combat --- */
 @keyframes damageShake {
