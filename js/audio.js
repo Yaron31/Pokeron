@@ -8,6 +8,8 @@ const gameTheme = new Audio("assets/sons/1-04. Game Tutorial.mp3");
 const oakTheme = new Audio("assets/sons/06. Professor Oak.mp3");
 const battleTheme = new Audio("assets/sons/09. Battle! (Trainer).mp3");
 const victoryTheme = new Audio("assets/sons/10. Victory! (Trainer).mp3");
+const wildBattleTheme = new Audio("assets/sons/12. Battle! (Wild Pokémon).mp3");
+const wildVictoryTheme = new Audio("assets/sons/13. Victory! (Wild Pokémon).mp3");
 gameTheme.loop = true;
 gameTheme.volume = 0.5;
 oakTheme.loop = true;
@@ -19,6 +21,10 @@ battleTheme.loop = true;
 battleTheme.volume = 0.5;
 victoryTheme.loop = false;
 victoryTheme.volume = 0.5;
+wildBattleTheme.loop = true;
+wildBattleTheme.volume = 0.5;
+wildVictoryTheme.loop = false;
+wildVictoryTheme.volume = 0.5;
 
 // --- Audio Context pour sons synthétisés ---
 let audioCtx = null;

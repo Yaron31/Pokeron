@@ -240,6 +240,8 @@ function setupBattleUI() {
   playerSprite.style.backgroundColor = "";
   playerSprite.innerHTML = `<img src="${p.spriteBack}" alt="${pName(p)}" class="sprite-img">`;
   applySpriteOffset(playerSprite, p.spriteOffset?.back);
+  playerSprite.style.opacity = "1";
+  playerSprite.style.transform = "";
 
   document.getElementById("enemy-name").textContent = pName(e);
   document.getElementById("enemy-level").textContent = `${t("levelAbbr")}${e.level}`;
@@ -248,6 +250,8 @@ function setupBattleUI() {
   enemySprite.style.backgroundColor = "";
   enemySprite.innerHTML = `<img src="${e.spriteFront}" alt="${pName(e)}" class="sprite-img">`;
   applySpriteOffset(enemySprite, e.spriteOffset?.front);
+  enemySprite.style.opacity = "1";
+  enemySprite.style.transform = "";
 
   updateHpBar("player", p);
   updateHpBar("enemy", e);
@@ -534,8 +538,9 @@ function cleanupBattleIntro() {
 async function startBattle() {
   gameState.battleActive = true;
   gameState.combatNumber++;
-  battleTheme.currentTime = 0;
-  battleTheme.play().catch(() => {});
+  const currentBattleTheme = gameState.battleType === "wild" ? wildBattleTheme : battleTheme;
+  currentBattleTheme.currentTime = 0;
+  currentBattleTheme.play().catch(() => {});
 
   setupBattleUI();
 
@@ -656,7 +661,13 @@ async function executeTurn(action) {
     if (e.currentPv > 0 && p.currentPv > 0) {
       const aiMove = aiChooseMove(e, p);
       await executeAttack({ mon: e, move: aiMove, target: p, isPlayer: false });
-      if (p.currentPv <= 0) { await endBattle(false); return false; }
+      if (p.currentPv <= 0) {
+        if (gameState.team.some(m => m !== p && m.currentPv > 0)) {
+          await forceSwitch();
+          gameState.battleActive = true;
+          return true;
+        } else { await endBattle(false); return false; }
+      }
     }
     gameState.battleActive = true;
     return true;
@@ -668,7 +679,13 @@ async function executeTurn(action) {
     if (e.currentPv > 0 && gameState.playerPokemon.currentPv > 0) {
       const aiMove = aiChooseMove(e, gameState.playerPokemon);
       await executeAttack({ mon: e, move: aiMove, target: gameState.playerPokemon, isPlayer: false });
-      if (gameState.playerPokemon.currentPv <= 0) { await endBattle(false); return false; }
+      if (gameState.playerPokemon.currentPv <= 0) {
+        if (gameState.team.some(m => m !== gameState.playerPokemon && m.currentPv > 0)) {
+          await forceSwitch();
+          gameState.battleActive = true;
+          return true;
+        } else { await endBattle(false); return false; }
+      }
     }
     gameState.battleActive = true;
     return true;
@@ -688,14 +705,30 @@ async function executeTurn(action) {
 
   await executeAttack(first);
   if (first.target.currentPv <= 0) {
-    await endBattle(first.target === e);
-    return false;
+    if (first.target === e) {
+      await endBattle(true);
+      return false;
+    }
+    // Joueur KO
+    if (gameState.team.some(m => m !== gameState.playerPokemon && m.currentPv > 0)) {
+      await forceSwitch();
+      gameState.battleActive = true;
+      return true;
+    } else { await endBattle(false); return false; }
   }
 
   await executeAttack(second);
   if (second.target.currentPv <= 0) {
-    await endBattle(second.target === e);
-    return false;
+    if (second.target === e) {
+      await endBattle(true);
+      return false;
+    }
+    // Joueur KO
+    if (gameState.team.some(m => m !== gameState.playerPokemon && m.currentPv > 0)) {
+      await forceSwitch();
+      gameState.battleActive = true;
+      return true;
+    } else { await endBattle(false); return false; }
   }
 
   gameState.battleActive = true;
@@ -721,6 +754,31 @@ async function useItem(itemKey, targetIndex) {
   }
 
   const target = gameState.team[targetIndex];
+
+  if (item.type === "xp_boost") {
+    await showMessage(t("usedItem", { name: pName(target), item: itemName(itemKey) }));
+    await waitForClick();
+    target.exp += item.xpAmount;
+    await showMessage(t("expGain", { name: pName(target), exp: item.xpAmount }));
+    await waitForClick();
+    // Vérifier level up
+    while (target.exp >= Math.pow(target.level + 1, 3)) {
+      target.level++;
+      const data = POKEMON_DATA[target.key];
+      const stats = data.baseStats;
+      target.maxPv = stats.pv + target.level * 2;
+      target.atk = stats.atk + Math.floor(target.level * 0.5);
+      target.def = stats.def + Math.floor(target.level * 0.5);
+      target.currentPv = Math.min(target.currentPv + 5, target.maxPv);
+      await showMessage(t("levelUp", { name: pName(target), level: target.level }));
+      await waitForClick();
+    }
+    if (target === gameState.playerPokemon) {
+      updateHpBar("player", target);
+      updateXpBar(target);
+    }
+    return true;
+  }
 
   if (item.healAmount) {
     const before = target.currentPv;
@@ -748,15 +806,25 @@ async function attemptCapture() {
   const data = POKEMON_DATA[e.key];
   const catchRate = data.catchRate || 127;
 
-  // Formule Gen3 simplifiée : plus les PV sont bas, plus c'est facile
+  // Formule Gen3 : plus les PV sont bas, plus c'est facile
   const hpFactor = (3 * e.maxPv - 2 * e.currentPv) / (3 * e.maxPv);
-  const modifiedRate = catchRate * hpFactor;
-  const shakeChance = modifiedRate / 255;
+  const modifiedRate = Math.min(255, catchRate * hpFactor);
+
+  // Capture garantie si le taux modifié atteint 255
+  if (modifiedRate >= 255) {
+    await animateCapture(3, true);
+    await showMessage(t("pokemonCaught", { name: pName(e) }));
+    await waitForClick();
+    return true;
+  }
+
+  // Probabilité par shake (formule Gen3 avec racine carrée)
+  const shakeProbability = Math.sqrt(Math.sqrt(modifiedRate / 255));
 
   // Calculer combien de shakes réussis (0-3)
   let shakes = 0;
   for (let i = 0; i < 3; i++) {
-    if (Math.random() < shakeChance) shakes++;
+    if (Math.random() < shakeProbability) shakes++;
     else break;
   }
   const caught = shakes === 3;
@@ -862,15 +930,19 @@ async function animateCapture(shakes, caught) {
   flash.remove();
   enemySprite.style.transition = "";
 
-  // Repositionner la pokéball sur la battlebase
-  pokeball.getAnimations().forEach(a => a.cancel());
-  pokeball.style.left = (targetX - 14) + "px";
+  // Fixer la pokéball à sa position finale d'arc
+  pokeball.getAnimations().forEach(a => {
+    a.commitStyles();
+    a.cancel();
+  });
+  // Repositionner proprement sur la battlebase
+  pokeball.style.left = (targetX - 20) + "px";
   pokeball.style.top = targetY + "px";
   pokeball.style.transform = "";
 
   // Secousses (0 à 3)
   for (let i = 0; i < shakes; i++) {
-    await delay(500);
+    await delay(800);
     const shakeAnim = pokeball.animate([
       { transform: "rotate(0deg)" },
       { transform: "rotate(-20deg)" },
@@ -882,7 +954,64 @@ async function animateCapture(shakes, caught) {
   }
 
   if (caught) {
-    await delay(400);
+    await delay(600);
+
+    // Son "cling" synthétisé
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(1200, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(2400, ctx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.5);
+      setTimeout(() => ctx.close(), 600);
+    } catch (e) { /* audio unavailable */ }
+
+    // Flash blanc léger
+    const clingFlash = document.createElement("div");
+    const pbRect = pokeball.getBoundingClientRect();
+    const flRect = field.getBoundingClientRect();
+    const cx = pbRect.left - flRect.left + pbRect.width / 2;
+    const cy = pbRect.top - flRect.top + pbRect.height / 2;
+    clingFlash.style.cssText = `
+      position: absolute; left: ${cx - 30}px; top: ${cy - 30}px;
+      width: 60px; height: 60px; background: rgba(255,255,255,0.9);
+      border-radius: 50%; z-index: 16; pointer-events: none;
+    `;
+    field.appendChild(clingFlash);
+    clingFlash.animate([
+      { transform: "scale(0.3)", opacity: 1 },
+      { transform: "scale(1.5)", opacity: 0 }
+    ], { duration: 400, easing: "ease-out", fill: "forwards" });
+
+    // Étoiles qui éclatent depuis la pokéball
+    const starAngles = [0, 72, 144, 216, 288];
+    const stars = starAngles.map(angle => {
+      const star = document.createElement("div");
+      const rad = angle * Math.PI / 180;
+      star.textContent = "★";
+      star.style.cssText = `
+        position: absolute; left: ${cx}px; top: ${cy}px;
+        font-size: 14px; color: #FFD700; z-index: 17;
+        pointer-events: none; text-shadow: 0 0 4px #FFF;
+      `;
+      field.appendChild(star);
+      star.animate([
+        { transform: "translate(0, 0) scale(1)", opacity: 1 },
+        { transform: `translate(${Math.cos(rad) * 40}px, ${Math.sin(rad) * 40}px) scale(0.3)`, opacity: 0 }
+      ], { duration: 500, easing: "ease-out", fill: "forwards" });
+      return star;
+    });
+
+    await delay(500);
+    clingFlash.remove();
+    stars.forEach(s => s.remove());
     pokeball.remove();
   } else {
     await delay(300);
@@ -896,6 +1025,128 @@ async function animateCapture(shakes, caught) {
   }
 }
 
+// Animation de rappel — laser rouge/blanc, sprite devient blanc puis rétrécit
+async function animateRecall() {
+  const playerSprite = document.getElementById("player-sprite");
+  const spriteImg = playerSprite.querySelector(".sprite-img");
+
+  // Son de rappel (bip descendant)
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(1000, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.4);
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.4);
+  } catch (e) { /* audio unavailable */ }
+
+  // Sprite devient blanc/rouge puis rétrécit
+  if (spriteImg) {
+    spriteImg.animate([
+      { filter: "brightness(1) saturate(1)", transform: spriteImg.style.transform || "scale(1)" },
+      { filter: "brightness(3) saturate(0.3) sepia(1) hue-rotate(-30deg)", transform: spriteImg.style.transform || "scale(1)", offset: 0.3 },
+      { filter: "brightness(5) saturate(0)", transform: "scale(0.1) translateY(20px)", opacity: 0 }
+    ], { duration: 500, easing: "ease-in", fill: "forwards" });
+  }
+
+  playerSprite.animate([
+    { opacity: 1 },
+    { opacity: 1, offset: 0.3 },
+    { opacity: 0 }
+  ], { duration: 500, easing: "ease-in", fill: "forwards" });
+
+  await delay(500);
+  playerSprite.style.opacity = "0";
+}
+
+// Lancer une pokéball pour envoyer un Pokémon (réutilisable)
+async function throwAndSendPokemon() {
+  const field = document.querySelector(".battle-field");
+  const fieldRect = field.getBoundingClientRect();
+  const trainerPlayer = document.getElementById("trainer-player");
+  const trainerPlayerImg = document.getElementById("trainer-player-img");
+  const playerSprite = document.getElementById("player-sprite");
+
+  // Afficher le dresseur
+  trainerPlayer.classList.remove("hidden");
+  trainerPlayer.style.transform = "translateX(0)";
+  trainerPlayerImg.src = "assets/images/dresseur/back_player.png";
+
+  // GIF de lancer
+  trainerPlayerImg.src = "assets/images/dresseur/gif_player_throw_ball.gif";
+  await delay(600);
+  // Figer le GIF
+  try {
+    const c = document.createElement("canvas");
+    c.width = trainerPlayerImg.naturalWidth;
+    c.height = trainerPlayerImg.naturalHeight;
+    c.getContext("2d").drawImage(trainerPlayerImg, 0, 0);
+    trainerPlayerImg.src = c.toDataURL("image/png");
+  } catch (e) {}
+
+  // Pokéball
+  const playerRect = trainerPlayer.getBoundingClientRect();
+  const pokeball = document.createElement("img");
+  pokeball.src = "assets/images/menu/pokeball_close.PNG";
+  pokeball.className = "pokeball-throw";
+  pokeball.style.left = (playerRect.left - fieldRect.left + playerRect.width * 0.7) + "px";
+  pokeball.style.top = (playerRect.top - fieldRect.top + playerRect.height * 0.2) + "px";
+  field.appendChild(pokeball);
+
+  const targetX = fieldRect.width * 0.22;
+  const targetY = fieldRect.height * 0.65;
+  const startX = parseFloat(pokeball.style.left);
+  const startY = parseFloat(pokeball.style.top);
+  const dx = targetX - startX;
+  const dy = targetY - startY;
+
+  const pokeAnim = pokeball.animate([
+    { transform: "translate(0, 0) rotate(0deg)", offset: 0 },
+    { transform: `translate(${dx * 0.5}px, ${dy - 100}px) rotate(-360deg)`, offset: 0.4 },
+    { transform: `translate(${dx}px, ${dy}px) rotate(-720deg)`, offset: 0.85 },
+    { transform: `translate(${dx}px, ${dy + 8}px) rotate(-720deg)`, offset: 0.92 },
+    { transform: `translate(${dx}px, ${dy}px) rotate(-720deg)`, offset: 1 },
+  ], { duration: 600, easing: "ease-in-out", fill: "forwards" });
+
+  // Slide-out du dresseur
+  const slideOut = trainerPlayer.animate([
+    { transform: "translateX(0)" },
+    { transform: "translateX(-200%)" }
+  ], { duration: 500, easing: "ease-in", fill: "forwards" });
+  slideOut.finished.then(() => {
+    slideOut.commitStyles();
+    slideOut.cancel();
+    trainerPlayer.classList.add("hidden");
+  });
+
+  await pokeAnim.finished;
+
+  // Flash blanc
+  const flash = document.createElement("div");
+  flash.style.cssText = `
+    position: absolute; left: ${targetX - 40}px; top: ${targetY - 40}px;
+    width: 80px; height: 80px; background: white; border-radius: 50%;
+    z-index: 14; animation: flashBurst 350ms ease-out forwards;
+  `;
+  field.appendChild(flash);
+  pokeball.remove();
+
+  // Pokémon apparaît
+  playerSprite.style.opacity = "1";
+  playerSprite.style.animation = "pokemonAppear 400ms ease-out forwards";
+
+  await delay(500);
+  flash.remove();
+  playerSprite.style.animation = "";
+  playerSprite.style.transform = "";
+}
+
 // Changer de Pokémon
 async function switchPokemon(targetIndex) {
   const old = gameState.playerPokemon;
@@ -904,34 +1155,97 @@ async function switchPokemon(targetIndex) {
   await showMessage(t("comeBack", { name: pName(old) }));
   await waitForClick();
 
-  // Animation : sprite disparaît
-  const playerSprite = document.getElementById("player-sprite");
-  playerSprite.style.transition = "opacity 0.3s, transform 0.3s";
-  playerSprite.style.opacity = "0";
-  playerSprite.style.transform = "scale(0.3)";
-  await delay(350);
+  // Animation de rappel (laser rouge/blanc)
+  await animateRecall();
 
   // Changer le pokémon actif
   gameState.playerPokemon = next;
   next.statModifiers = {};
-
-  // Mettre à jour UI
   setupBattleUI();
 
-  // Animation : nouveau sprite apparaît
-  playerSprite.style.transform = "scale(0.3)";
-  playerSprite.style.opacity = "0";
-  await delay(50);
-  playerSprite.style.opacity = "1";
-  playerSprite.style.transform = "scale(1)";
-  await delay(350);
-  playerSprite.style.transition = "";
-  playerSprite.style.transform = "";
+  // Lancer le nouveau Pokémon avec GIF + pokéball
+  await throwAndSendPokemon();
 
   await showMessage(t("goPlayer", { name: pName(next) }));
   await waitForClick();
 }
 
+// Switch forcé quand le Pokémon actif est KO mais l'équipe a des survivants
+async function forceSwitch() {
+  const index = await promptForceSwitch();
+  await switchToFainted(index);
+}
+
+// Panel d'équipe en mode forcé — pas de cancel, seuls les vivants sont cliquables
+function promptForceSwitch() {
+  return new Promise(resolve => {
+    // Garde défensive : si aucun survivant, ne pas ouvrir le panel
+    const hasSurvivor = gameState.team.some(m => m !== gameState.playerPokemon && m.currentPv > 0);
+    if (!hasSurvivor) { resolve(-1); return; }
+
+    const panel = document.getElementById("battle-team-panel");
+    const prompt = panel.querySelector(".team-prompt");
+    const cancelBtn = panel.querySelector(".team-cancel-btn");
+
+    prompt.textContent = t("sendWhichPokemon");
+    cancelBtn.style.display = "none";
+
+    for (let i = 0; i < 6; i++) {
+      const slot = document.getElementById("team-slot-" + i);
+      const mon = gameState.team[i];
+      if (!mon) {
+        slot.innerHTML = "";
+        slot.classList.add("empty");
+        continue;
+      }
+      slot.classList.remove("empty", "fainted", "selected");
+      const isFainted = mon.currentPv <= 0;
+      if (isFainted) slot.classList.add("fainted");
+      slot.innerHTML = renderSlotContent(mon, mon === gameState.playerPokemon);
+
+      if (!isFainted && mon !== gameState.playerPokemon) {
+        slot.onclick = () => {
+          panel.classList.add("hidden");
+          cleanupForceListeners();
+          resolve(i);
+        };
+      } else {
+        slot.onclick = null;
+      }
+    }
+
+    function cleanupForceListeners() {
+      for (let i = 0; i < 6; i++) {
+        document.getElementById("team-slot-" + i).onclick = null;
+      }
+      cancelBtn.style.display = "";
+      prompt.textContent = t("chooseAPokemon");
+    }
+
+    panel.classList.remove("hidden");
+  });
+}
+
+// Switch sans "Reviens !" (le Pokémon est KO)
+async function switchToFainted(targetIndex) {
+  const next = gameState.team[targetIndex];
+  if (!next) return;
+
+  // Le sprite KO est déjà tombé, on le cache
+  const playerSprite = document.getElementById("player-sprite");
+  playerSprite.style.opacity = "0";
+
+  // Changer le pokémon actif
+  gameState.playerPokemon = next;
+  next.statModifiers = {};
+  setupBattleUI();
+
+  // Lancer le nouveau Pokémon avec GIF + pokéball
+  await throwAndSendPokemon();
+
+  await showMessage(t("goPlayer", { name: pName(next) }));
+  await waitForClick();
+}
 
 const ATTACK_SLIDE_MS = 350;
 const HIT_ANIM_MS = 400;
@@ -985,6 +1299,16 @@ async function animateStatEffect(targetEl, isBuff, effect) {
     const spriteImg = targetEl.querySelector(".sprite-img");
     if (!spriteImg) return;
 
+    // Convertir le sprite en data URL pour contourner CORS en file://
+    let maskUrl = spriteImg.src;
+    try {
+      const cvs = document.createElement("canvas");
+      cvs.width = spriteImg.naturalWidth || spriteImg.width;
+      cvs.height = spriteImg.naturalHeight || spriteImg.height;
+      cvs.getContext("2d").drawImage(spriteImg, 0, 0);
+      maskUrl = cvs.toDataURL();
+    } catch (e) { /* fallback sur src directe */ }
+
     // Copier le transform du sprite (offset + scale) pour aligner l'overlay
     const spriteTransform = spriteImg.style.transform || "";
 
@@ -995,8 +1319,8 @@ async function animateStatEffect(targetEl, isBuff, effect) {
       background-image: url("${imgUrl}");
       background-size: 100% auto;
       background-repeat: repeat-y;
-      mask-image: url("${spriteImg.src}");
-      -webkit-mask-image: url("${spriteImg.src}");
+      mask-image: url("${maskUrl}");
+      -webkit-mask-image: url("${maskUrl}");
       mask-size: contain;
       -webkit-mask-size: contain;
       mask-repeat: no-repeat;
@@ -1223,7 +1547,9 @@ function showMoveReplacementUI(pokemon, newMove) {
 async function endBattle(playerWon) {
   gameState.battleActive = false;
   hideBattleMenus();
-  fadeOutAudio(battleTheme, 500);
+  const currentBTheme = gameState.battleType === "wild" ? wildBattleTheme : battleTheme;
+  const currentVTheme = gameState.battleType === "wild" ? wildVictoryTheme : victoryTheme;
+  fadeOutAudio(currentBTheme, 500);
 
   if (playerWon === null) {
     // Fuite — pas d'XP, transition directe
@@ -1234,8 +1560,8 @@ async function endBattle(playerWon) {
   // Capture réussie
   if (playerWon === "captured") {
     setTimeout(() => {
-      victoryTheme.currentTime = 0;
-      victoryTheme.play().catch(() => {});
+      currentVTheme.currentTime = 0;
+      currentVTheme.play().catch(() => {});
     }, 500);
 
     if (gameState.battleType === "wild") {
@@ -1274,8 +1600,8 @@ async function endBattle(playerWon) {
 
   if (playerWon) {
     setTimeout(() => {
-      victoryTheme.currentTime = 0;
-      victoryTheme.play().catch(() => {});
+      currentVTheme.currentTime = 0;
+      currentVTheme.play().catch(() => {});
     }, 500);
     const p = gameState.playerPokemon;
     const e = gameState.enemyPokemon;
@@ -1389,13 +1715,14 @@ function showResult(won) {
       startWildCycle();
       transitionToBattleFromResult();
     });
+    const teamBtn = createResultBtn(t("manageTeam"), true, () => openTeamManager());
     const saveBtn = createResultBtn(t("save"), true, () => {
       saveGame();
       const msg = document.getElementById("saved-msg");
       if (msg) { msg.classList.add("visible"); setTimeout(() => msg.classList.remove("visible"), 2000); }
     });
     const menuBtn = createResultBtn(t("backToMenu"), true, () => transitionToMenu());
-    buttonsEl.append(nextBtn, saveBtn, menuBtn);
+    buttonsEl.append(nextBtn, teamBtn, saveBtn, menuBtn);
     transitionToResult();
     return;
   }
@@ -1409,11 +1736,13 @@ function showResult(won) {
         <div class="result-battle-count">${t("wildBattlesLeft", { count: gameState.wildBattlesRemaining })}</div>
       `;
       const nextBtn = createResultBtn(t("nextWildBattle"), false, () => {
+        gameState.team.forEach(pk => restorePokemon(pk));
         generateWildEnemy();
         transitionToBattleFromResult();
       });
+      const teamBtn = createResultBtn(t("manageTeam"), true, () => openTeamManager());
       const menuBtn = createResultBtn(t("backToMenu"), true, () => transitionToMenu());
-      buttonsEl.append(nextBtn, menuBtn);
+      buttonsEl.append(nextBtn, teamBtn, menuBtn);
     } else {
       // Plus de combats sauvages → soin auto → rival
       gameState.team.forEach(pk => restorePokemon(pk));
@@ -1428,13 +1757,14 @@ function showResult(won) {
         generateRivalEnemy();
         transitionToBattleFromResult();
       });
+      const teamBtn = createResultBtn(t("manageTeam"), true, () => openTeamManager());
       const saveBtn = createResultBtn(t("save"), true, () => {
         saveGame();
         const msg = document.getElementById("saved-msg");
         if (msg) { msg.classList.add("visible"); setTimeout(() => msg.classList.remove("visible"), 2000); }
       });
       const menuBtn = createResultBtn(t("backToMenu"), true, () => transitionToMenu());
-      buttonsEl.append(nextBtn, saveBtn, menuBtn);
+      buttonsEl.append(nextBtn, teamBtn, saveBtn, menuBtn);
     }
     transitionToResult();
     return;
@@ -1442,6 +1772,74 @@ function showResult(won) {
 
   // Fallback (ne devrait pas arriver)
   transitionToResult();
+}
+
+// Gestionnaire d'équipe entre combats (swap + items)
+function openTeamManager() {
+  const panel = document.getElementById("battle-team-panel");
+  const prompt = panel.querySelector(".team-prompt");
+  const cancelBtn = panel.querySelector(".team-cancel-btn");
+
+  let selectedIndex = -1;
+  prompt.textContent = t("manageTeamPrompt");
+  cancelBtn.textContent = t("done");
+
+  function renderManagerSlots() {
+    for (let i = 0; i < 6; i++) {
+      const slot = document.getElementById("team-slot-" + i);
+      const mon = gameState.team[i];
+      if (!mon) {
+        slot.innerHTML = "";
+        slot.className = i === 0 ? "team-slot team-slot-active empty" : "team-slot empty";
+        slot.onclick = null;
+        continue;
+      }
+      slot.className = i === 0 ? "team-slot team-slot-active" : "team-slot";
+      if (mon.currentPv <= 0) slot.classList.add("fainted");
+      if (i === selectedIndex) slot.classList.add("selected");
+      const isFirst = i === 0;
+      slot.innerHTML = renderSlotContent(mon, isFirst);
+
+      slot.onclick = () => {
+        if (selectedIndex === -1) {
+          // Premier clic : sélectionner
+          selectedIndex = i;
+          prompt.textContent = t("swapWith", { name: pName(mon) });
+          renderManagerSlots();
+        } else if (selectedIndex === i) {
+          // Même slot : désélectionner
+          selectedIndex = -1;
+          prompt.textContent = t("manageTeamPrompt");
+          renderManagerSlots();
+        } else {
+          // Swap les deux Pokémon
+          const temp = gameState.team[selectedIndex];
+          gameState.team[selectedIndex] = gameState.team[i];
+          gameState.team[i] = temp;
+          // Mettre à jour playerPokemon si nécessaire
+          gameState.playerPokemon = gameState.team[0];
+          selectedIndex = -1;
+          prompt.textContent = t("manageTeamPrompt");
+          saveGame();
+          renderManagerSlots();
+        }
+      };
+    }
+  }
+
+  renderManagerSlots();
+
+  cancelBtn.onclick = () => {
+    panel.classList.add("hidden");
+    for (let i = 0; i < 6; i++) {
+      document.getElementById("team-slot-" + i).onclick = null;
+    }
+    cancelBtn.onclick = null;
+    prompt.textContent = t("chooseAPokemon");
+    cancelBtn.textContent = t("cancel");
+  };
+
+  panel.classList.remove("hidden");
 }
 
 function createResultBtn(text, secondary, onclick) {

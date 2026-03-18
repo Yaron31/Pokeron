@@ -672,6 +672,13 @@ const ITEMS = {
     descKey: "itemDesc_pokeball",
     icon: "assets/images/item/pokeball_inventory.png",
     type: "ball"
+  },
+  xpcandy: {
+    name: { fr: "Bonbon XP", en: "XP Candy" },
+    descKey: "itemDesc_xpcandy",
+    icon: "assets/images/item/pokeball_inventory.png",
+    type: "xp_boost",
+    xpAmount: 50
   }
 };
 
@@ -681,7 +688,7 @@ let gameState = {
   combatNumber: 0,
   battleActive: false,
   team: [],
-  inventory: { potion: Infinity, pokeball: Infinity },
+  inventory: { potion: Infinity, pokeball: Infinity, xpcandy: Infinity },
   battleType: "rival",
   progressionRound: 1,
   wildBattlesRemaining: 0,

@@ -7,6 +7,7 @@ let battleMenuState = "none"; // "none" | "main" | "moves" | "bag" | "team"
 let battleMenuIndex = 0;      // curseur dans le menu principal (0-3, grille 2x2)
 let bagMenuIndex = 0;
 let teamMenuIndex = 0;
+let teamConfirmIndex = -1;    // index du Pokémon sélectionné pour confirmation de switch
 let _playerActionResolve = null;
 
 // ==============================================
@@ -130,6 +131,7 @@ document.addEventListener("click", (e) => {
 
 // Synchroniser souris et clavier : mouseenter met à jour l'index
 document.addEventListener("mouseenter", (e) => {
+  if (!e.target || !e.target.closest) return;
   const btn = e.target.closest(".menu-choice");
   if (!btn || battleMenuState !== "main") return;
   const choices = ["attack", "bag", "pokemon", "flee"];
@@ -281,6 +283,7 @@ function showTeamPanel() {
   document.getElementById("battle-main-menu").classList.add("hidden");
   battleMenuState = "team";
   teamMenuIndex = 0;
+  teamConfirmIndex = -1;
   renderTeamList();
   document.getElementById("battle-team-panel").classList.remove("hidden");
 }
@@ -335,7 +338,19 @@ function renderTeamList() {
     slot.addEventListener("click", () => {
       if (battlePaused) return;
       if (isActive || isFainted) return;
-      resolvePlayerAction({ type: "switch", targetIndex: i });
+      if (teamConfirmIndex === i) {
+        // Deuxième clic = confirmer le switch
+        teamConfirmIndex = -1;
+        document.querySelector(".team-prompt").textContent = t("chooseAPokemon");
+        resolvePlayerAction({ type: "switch", targetIndex: i });
+      } else {
+        // Premier clic = sélectionner et demander confirmation
+        teamConfirmIndex = i;
+        teamMenuIndex = i;
+        updateTeamSelection();
+        document.querySelector(".team-prompt").textContent =
+          t("confirmSwitch", { name: pName(mon) });
+      }
     });
 
     // Synchroniser souris et clavier
@@ -374,7 +389,17 @@ function confirmTeamChoice() {
   if (!mon) return;
   if (mon === gameState.playerPokemon) return;
   if (mon.currentPv <= 0) return;
-  resolvePlayerAction({ type: "switch", targetIndex: teamMenuIndex });
+  if (teamConfirmIndex === teamMenuIndex) {
+    // Déjà sélectionné → confirmer
+    teamConfirmIndex = -1;
+    document.querySelector(".team-prompt").textContent = t("chooseAPokemon");
+    resolvePlayerAction({ type: "switch", targetIndex: teamMenuIndex });
+  } else {
+    // Sélectionner pour confirmation
+    teamConfirmIndex = teamMenuIndex;
+    document.querySelector(".team-prompt").textContent =
+      t("confirmSwitch", { name: pName(mon) });
+  }
 }
 
 // ==============================================

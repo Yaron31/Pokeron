@@ -699,8 +699,9 @@ body {
 /* Pokéball en vol */
 .pokeball-throw {
   position: absolute;
-  width: 28px;
-  height: 28px;
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
   z-index: 15;
   image-rendering: pixelated;
   pointer-events: none;

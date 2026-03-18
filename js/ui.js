@@ -193,6 +193,7 @@ function transitionToResult() {
 function transitionToBattleFromResult() {
   currentScreen = "battle";
   fadeOutAudio(victoryTheme, 500);
+  fadeOutAudio(wildVictoryTheme, 500);
   battleTransition(resultScreen, () => startBattle());
 }
 
