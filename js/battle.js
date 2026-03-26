@@ -1289,7 +1289,7 @@ async function animateProjectile(attackerEl, defenderEl, color) {
   proj.remove();
 }
 
-// Animation stat Gen III — pattern sur silhouette via mix-blend-mode (compatible file://)
+// Animation stat Gen III — canvas compositing (compatible file://, pas de CORS)
 async function animateStatEffect(targetEl, isBuff, effect) {
   try {
     const statName = STAT_EFFECT_MAP[effect] || "attack";
@@ -1299,51 +1299,95 @@ async function animateStatEffect(targetEl, isBuff, effect) {
     const spriteImg = targetEl.querySelector(".sprite-img");
     if (!spriteImg) return;
 
-    const spriteTransform = spriteImg.style.transform || "";
+    // Pré-charger l'image de pattern
+    const patternImg = new Image();
+    patternImg.src = imgUrl;
+    await new Promise((resolve, reject) => {
+      if (patternImg.complete) return resolve();
+      patternImg.onload = resolve;
+      patternImg.onerror = reject;
+    });
 
-    // Conteneur isolé pour le blend compositing (évite d'affecter les parents)
-    const container = document.createElement("div");
-    container.style.cssText = `
+    // Créer le canvas overlay
+    const canvas = document.createElement("canvas");
+    const rect = targetEl.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+    canvas.style.cssText = `
       position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      z-index: 15; pointer-events: none; overflow: hidden;
-      isolation: isolate;
+      z-index: 15; pointer-events: none; image-rendering: pixelated;
     `;
+    targetEl.appendChild(canvas);
+    const ctx = canvas.getContext("2d");
 
-    // Couche 1 : pattern de stat (chevrons colorés qui défilent)
-    const pattern = document.createElement("div");
-    pattern.style.cssText = `
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      background-image: url("${imgUrl}");
-      background-size: 100% auto;
-      background-repeat: repeat-y;
-      image-rendering: pixelated;
-      transform: ${spriteTransform};
-    `;
+    // Parser le transform du sprite (translate + scale)
+    const transformStr = spriteImg.style.transform || "";
+    let tx = 0, ty = 0, sc = 1;
+    const translateMatch = transformStr.match(/translate\(([^,]+),\s*([^)]+)\)/);
+    if (translateMatch) {
+      tx = parseFloat(translateMatch[1]) || 0;
+      ty = parseFloat(translateMatch[2]) || 0;
+    }
+    const scaleMatch = transformStr.match(/scale\(([^)]+)\)/);
+    if (scaleMatch) sc = parseFloat(scaleMatch[1]) || 1;
 
-    // Couche 2 : clone du sprite avec destination-in (découpe à la silhouette)
-    const mask = spriteImg.cloneNode(true);
-    mask.style.cssText = `
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      object-fit: contain; image-rendering: pixelated;
-      mix-blend-mode: destination-in;
-      transform: ${spriteTransform};
-    `;
+    // Position du sprite dans le conteneur (object-fit: contain centré)
+    const spriteW = spriteImg.naturalWidth || spriteImg.width;
+    const spriteH = spriteImg.naturalHeight || spriteImg.height;
+    const containerW = canvas.width;
+    const containerH = canvas.height;
+    const fitScale = Math.min(containerW / spriteW, containerH / spriteH) * sc;
+    const drawW = spriteW * fitScale;
+    const drawH = spriteH * fitScale;
+    const drawX = (containerW - drawW) / 2 + tx * fitScale / sc;
+    const drawY = (containerH - drawH) / 2 + ty * fitScale / sc;
 
-    container.appendChild(pattern);
-    container.appendChild(mask);
-    targetEl.appendChild(container);
-
-    // Scroll vertical : monte (buff) ou descend (debuff)
+    // Paramètres d'animation
+    const duration = 2000;
     const scrollDist = isBuff ? -200 : 200;
-    const anim = pattern.animate([
-      { backgroundPositionY: "0px", opacity: 0 },
-      { backgroundPositionY: "0px", opacity: 0.7, offset: 0.1 },
-      { backgroundPositionY: scrollDist + "px", opacity: 0.7, offset: 0.85 },
-      { backgroundPositionY: scrollDist + "px", opacity: 0 }
-    ], { duration: 2000, easing: "linear" });
+    const patternTileH = patternImg.height * (drawW / patternImg.width);
+    const startTime = performance.now();
 
-    await anim.finished;
-    container.remove();
+    await new Promise(resolve => {
+      function frame(now) {
+        const elapsed = now - startTime;
+        const t = Math.min(elapsed / duration, 1);
+
+        // Opacité : fade in (0-10%), stay (10-85%), fade out (85-100%)
+        let opacity;
+        if (t < 0.1) opacity = (t / 0.1) * 0.7;
+        else if (t < 0.85) opacity = 0.7;
+        else opacity = 0.7 * (1 - (t - 0.85) / 0.15);
+
+        const scrollY = scrollDist * t;
+
+        ctx.clearRect(0, 0, containerW, containerH);
+        ctx.globalAlpha = opacity;
+        ctx.globalCompositeOperation = "source-over";
+
+        // Dessiner le pattern en tuiles verticales avec scroll
+        const tileCount = Math.ceil(drawH / patternTileH) + 2;
+        const baseY = scrollY % patternTileH;
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(drawX, drawY, drawW, drawH);
+        ctx.clip();
+        for (let i = -1; i < tileCount; i++) {
+          ctx.drawImage(patternImg, drawX, drawY + baseY + i * patternTileH, drawW, patternTileH);
+        }
+        ctx.restore();
+
+        // Découper à la silhouette du sprite (destination-in)
+        ctx.globalCompositeOperation = "destination-in";
+        ctx.drawImage(spriteImg, drawX, drawY, drawW, drawH);
+        ctx.globalCompositeOperation = "source-over";
+        ctx.globalAlpha = 1;
+
+        if (t < 1) requestAnimationFrame(frame);
+        else { canvas.remove(); resolve(); }
+      }
+      requestAnimationFrame(frame);
+    });
   } catch (err) {
     console.error("animateStatEffect error:", err);
   }
