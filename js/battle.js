@@ -1320,27 +1320,15 @@ async function animateStatEffect(targetEl, isBuff, effect) {
     targetEl.appendChild(canvas);
     const ctx = canvas.getContext("2d");
 
-    // Parser le transform du sprite (translate + scale)
-    const transformStr = spriteImg.style.transform || "";
-    let tx = 0, ty = 0, sc = 1;
-    const translateMatch = transformStr.match(/translate\(([^,]+),\s*([^)]+)\)/);
-    if (translateMatch) {
-      tx = parseFloat(translateMatch[1]) || 0;
-      ty = parseFloat(translateMatch[2]) || 0;
-    }
-    const scaleMatch = transformStr.match(/scale\(([^)]+)\)/);
-    if (scaleMatch) sc = parseFloat(scaleMatch[1]) || 1;
-
-    // Position du sprite dans le conteneur (object-fit: contain centré)
-    const spriteW = spriteImg.naturalWidth || spriteImg.width;
-    const spriteH = spriteImg.naturalHeight || spriteImg.height;
+    // Position exacte du sprite via getBoundingClientRect (pas de parsing manual)
+    const spriteRect = spriteImg.getBoundingClientRect();
+    const containerRect = targetEl.getBoundingClientRect();
+    const drawX = spriteRect.left - containerRect.left;
+    const drawY = spriteRect.top - containerRect.top;
+    const drawW = spriteRect.width;
+    const drawH = spriteRect.height;
     const containerW = canvas.width;
     const containerH = canvas.height;
-    const fitScale = Math.min(containerW / spriteW, containerH / spriteH) * sc;
-    const drawW = spriteW * fitScale;
-    const drawH = spriteH * fitScale;
-    const drawX = (containerW - drawW) / 2 + tx * fitScale / sc;
-    const drawY = (containerH - drawH) / 2 + ty * fitScale / sc;
 
     // Paramètres d'animation
     const duration = 2000;
