@@ -240,7 +240,7 @@ function setupBattleUI() {
   playerSprite.style.backgroundColor = "";
   playerSprite.innerHTML = `<img src="${p.spriteBack}" alt="${pName(p)}" class="sprite-img">`;
   applySpriteOffset(playerSprite, p.spriteOffset?.back);
-  playerSprite.style.opacity = "1";
+  playerSprite.style.opacity = "0";
   playerSprite.style.transform = "";
 
   document.getElementById("enemy-name").textContent = pName(e);
@@ -250,7 +250,7 @@ function setupBattleUI() {
   enemySprite.style.backgroundColor = "";
   enemySprite.innerHTML = `<img src="${e.spriteFront}" alt="${pName(e)}" class="sprite-img">`;
   applySpriteOffset(enemySprite, e.spriteOffset?.front);
-  enemySprite.style.opacity = "1";
+  enemySprite.style.opacity = "0";
   enemySprite.style.transform = "";
 
   updateHpBar("player", p);
@@ -930,15 +930,11 @@ async function animateCapture(shakes, caught) {
   flash.remove();
   enemySprite.style.transition = "";
 
-  // Fixer la pokéball à sa position finale d'arc
+  // Fixer la pokéball à sa position finale d'arc (commitStyles conserve la position)
   pokeball.getAnimations().forEach(a => {
     a.commitStyles();
     a.cancel();
   });
-  // Repositionner proprement sur la battlebase
-  pokeball.style.left = (targetX - 20) + "px";
-  pokeball.style.top = targetY + "px";
-  pokeball.style.transform = "";
 
   // Secousses (0 à 3)
   for (let i = 0; i < shakes; i++) {
@@ -1881,6 +1877,7 @@ function openTeamManager() {
 
   cancelBtn.onclick = () => {
     panel.classList.add("hidden");
+    panel.style.zIndex = "";
     for (let i = 0; i < 6; i++) {
       document.getElementById("team-slot-" + i).onclick = null;
     }
@@ -1889,6 +1886,7 @@ function openTeamManager() {
     cancelBtn.textContent = t("cancel");
   };
 
+  panel.style.zIndex = "9999";
   panel.classList.remove("hidden");
 }
 

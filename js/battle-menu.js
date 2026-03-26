@@ -29,15 +29,11 @@ function hideBattleMenus() {
 }
 
 function showBattleMainMenu() {
-  hideBattleMenus();
   battleMenuState = "main";
   battleMenuIndex = 0;
   const menu = document.getElementById("battle-main-menu");
   menu.classList.remove("hidden");
   updateMainMenuSelection();
-
-  document.getElementById("battle-text").textContent =
-    t("whatWillDo", { name: pName(gameState.playerPokemon) });
 }
 
 function updateMainMenuSelection() {
@@ -54,10 +50,15 @@ function updateMainMenuSelection() {
 // ==============================================
 // Promise d'action joueur
 // ==============================================
-function waitForPlayerAction() {
+async function waitForPlayerAction() {
+  hideBattleMenus();
+  // Texte "Que va faire..." avec animation lettre par lettre
+  await showMessage(t("whatWillDo", { name: pName(gameState.playerPokemon) }));
+  // Puis montrer le menu
+  showBattleMainMenu();
+
   return new Promise(resolve => {
     _playerActionResolve = resolve;
-    showBattleMainMenu();
   });
 }
 

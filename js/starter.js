@@ -254,6 +254,6 @@ function createPokemonInstance(dataKey, level) {
     currentPv: stats.pv,
     moves: getMovesForLevel(dataKey, data, level),
     statModifiers: {},
-    exp: 0
+    exp: Math.pow(level, 3)
   };
 }
