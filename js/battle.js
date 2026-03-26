@@ -891,7 +891,7 @@ async function animateCapture(shakes, caught) {
   field.appendChild(pokeball);
 
   // Arc parabolique vers la battlebase (plus lent : 900ms)
-  const dx = targetX - startX;
+  const dx = targetX - 20 - startX;  // -20 pour centrer la ball (40px) sur targetX
   const dy = targetY - startY;
   const arcAnim = pokeball.animate([
     { transform: "translate(0, 0) rotate(0deg)", offset: 0 },
