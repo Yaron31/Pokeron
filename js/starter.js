@@ -154,7 +154,7 @@ function selectStarter(key) {
   gameState.playerPokemon = createPokemonInstance(key, 5);
   gameState.team = [gameState.playerPokemon];
   gameState.combatNumber = 0;
-  gameState.inventory = { potion: Infinity, pokeball: Infinity };
+  gameState.inventory = { potion: Infinity, pokeball: Infinity, xpcandy: Infinity };
   gameState.rivalStarterKey = MATCHUPS[key];
   gameState.progressionRound = 1;
   gameState.battleType = "rival";
@@ -170,7 +170,7 @@ function continueGame() {
   gameState.playerPokemon = save.playerPokemon;
   gameState.team = save.team || [gameState.playerPokemon];
   gameState.combatNumber = save.combatNumber;
-  gameState.inventory = { potion: Infinity, pokeball: Infinity };
+  gameState.inventory = save.inventory || { potion: Infinity, pokeball: Infinity, xpcandy: Infinity };
   gameState.rivalStarterKey = save.rivalStarterKey ?? MATCHUPS[save.playerPokemon.key];
   gameState.progressionRound = save.progressionRound ?? 1;
   gameState.battleType = save.battleType ?? "rival";
