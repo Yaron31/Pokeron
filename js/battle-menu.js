@@ -29,6 +29,7 @@ function hideBattleMenus() {
 }
 
 function showBattleMainMenu() {
+  hideBattleMenus();
   battleMenuState = "main";
   battleMenuIndex = 0;
   const menu = document.getElementById("battle-main-menu");
