@@ -1350,10 +1350,16 @@ async function animateStatEffect(targetEl, isBuff, effect) {
         const elapsed = now - startTime;
         const t = Math.min(elapsed / duration, 1);
 
+        // Opacité : fade in (0-10%), stay (10-85%), fade out (85-100%)
+        let opacity;
+        if (t < 0.1) opacity = (t / 0.1) * 0.7;
+        else if (t < 0.85) opacity = 0.7;
+        else opacity = 0.7 * (1 - (t - 0.85) / 0.15);
+
         const scrollY = scrollDist * t;
 
         ctx.clearRect(0, 0, containerW, containerH);
-        ctx.globalAlpha = 1;
+        ctx.globalAlpha = opacity;
         ctx.globalCompositeOperation = "source-over";
 
         // Appliquer le même CSS transform au canvas
