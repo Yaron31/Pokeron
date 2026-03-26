@@ -930,11 +930,14 @@ async function animateCapture(shakes, caught) {
   flash.remove();
   enemySprite.style.transition = "";
 
-  // Fixer la pokéball à sa position finale d'arc (commitStyles conserve la position)
+  // Fixer la pokéball au centre de la battlebase (convertir translate → left/top)
   pokeball.getAnimations().forEach(a => {
     a.commitStyles();
     a.cancel();
   });
+  pokeball.style.left = (targetX - 20) + "px";
+  pokeball.style.top = targetY + "px";
+  pokeball.style.transform = "";
 
   // Secousses (0 à 3)
   for (let i = 0; i < shakes; i++) {
