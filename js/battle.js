@@ -272,6 +272,18 @@ const STAT_EFFECT_MAP = {
   speedDown: "speed"
 };
 
+// Images de patterns par stat (chevrons Gen III)
+const STAT_EFFECT_IMGS = {
+  attack:      "assets/images/stat_effects/stat_effects_atk.PNG",
+  defense:     "assets/images/stat_effects/stat_effects_def.PNG",
+  speed:       "assets/images/stat_effects/stat_effects_speed.PNG",
+  accuracy:    "assets/images/stat_effects/stat_effects_accuracy.PNG",
+  spAttack:    "assets/images/stat_effects/stat_effects_spe_atk.PNG",
+  spDefense:   "assets/images/stat_effects/stat_effects_spe_def.PNG",
+  evasiveness: "assets/images/stat_effects/stat_effects_evasiveness.PNG",
+  mix:         "assets/images/stat_effects/stat_effects_mix.PNG"
+};
+
 function renderMoveButtons() {
   const movesDiv = document.getElementById("battle-moves");
   movesDiv.innerHTML = "";
@@ -1277,29 +1289,61 @@ async function animateProjectile(attackerEl, defenderEl, color) {
   proj.remove();
 }
 
-// Animation stat Gen III — filtres CSS sur le sprite (compatible file://)
+// Animation stat Gen III — pattern sur silhouette via mix-blend-mode (compatible file://)
 async function animateStatEffect(targetEl, isBuff, effect) {
   try {
+    const statName = STAT_EFFECT_MAP[effect] || "attack";
+    const imgUrl = STAT_EFFECT_IMGS[statName];
+    if (!imgUrl) return;
+
     const spriteImg = targetEl.querySelector(".sprite-img");
     if (!spriteImg) return;
 
-    const baseFilter = spriteImg.style.filter || "none";
-    const flashFilter = isBuff
-      ? "brightness(1.8) saturate(2) hue-rotate(60deg)"   // doré (buff)
-      : "brightness(0.6) saturate(2) hue-rotate(-30deg)";  // rouge (debuff)
+    const spriteTransform = spriteImg.style.transform || "";
 
-    // 3 flashs successifs
-    const anim = spriteImg.animate([
-      { filter: baseFilter },
-      { filter: flashFilter, offset: 0.1 },
-      { filter: baseFilter, offset: 0.23 },
-      { filter: flashFilter, offset: 0.33 },
-      { filter: baseFilter, offset: 0.46 },
-      { filter: flashFilter, offset: 0.56 },
-      { filter: baseFilter, offset: 0.7 },
-      { filter: baseFilter }
-    ], { duration: 1200, easing: "ease-in-out" });
+    // Conteneur isolé pour le blend compositing (évite d'affecter les parents)
+    const container = document.createElement("div");
+    container.style.cssText = `
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 15; pointer-events: none; overflow: hidden;
+      isolation: isolate;
+    `;
+
+    // Couche 1 : pattern de stat (chevrons colorés qui défilent)
+    const pattern = document.createElement("div");
+    pattern.style.cssText = `
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background-image: url("${imgUrl}");
+      background-size: 100% auto;
+      background-repeat: repeat-y;
+      image-rendering: pixelated;
+      transform: ${spriteTransform};
+    `;
+
+    // Couche 2 : clone du sprite avec destination-in (découpe à la silhouette)
+    const mask = spriteImg.cloneNode(true);
+    mask.style.cssText = `
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      object-fit: contain; image-rendering: pixelated;
+      mix-blend-mode: destination-in;
+      transform: ${spriteTransform};
+    `;
+
+    container.appendChild(pattern);
+    container.appendChild(mask);
+    targetEl.appendChild(container);
+
+    // Scroll vertical : monte (buff) ou descend (debuff)
+    const scrollDist = isBuff ? -200 : 200;
+    const anim = pattern.animate([
+      { backgroundPositionY: "0px", opacity: 0 },
+      { backgroundPositionY: "0px", opacity: 0.7, offset: 0.1 },
+      { backgroundPositionY: scrollDist + "px", opacity: 0.7, offset: 0.85 },
+      { backgroundPositionY: scrollDist + "px", opacity: 0 }
+    ], { duration: 2000, easing: "linear" });
+
     await anim.finished;
+    container.remove();
   } catch (err) {
     console.error("animateStatEffect error:", err);
   }
