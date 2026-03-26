@@ -1463,24 +1463,6 @@ body {
   pointer-events: none;
 }
 
-/* --- Overlay de stat Gen III (masqué sur le Pokémon) --- */
-.stat-overlay {
-  position: absolute;
-  z-index: 15;
-  pointer-events: none;
-  image-rendering: pixelated;
-  background-repeat: repeat;
-  background-size: 100% auto;
-  mask-size: contain;
-  mask-repeat: no-repeat;
-  mask-position: center;
-  -webkit-mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  top: 0;
-  left: 0;
-}
-
 /* --- Animation d'évolution --- */
 @keyframes evolutionFlash {
   0%, 100% { opacity: 1; filter: brightness(1); }

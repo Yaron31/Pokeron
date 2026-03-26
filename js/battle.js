@@ -272,18 +272,6 @@ const STAT_EFFECT_MAP = {
   speedDown: "speed"
 };
 
-// Images individuelles par stat (patterns Gen III)
-const STAT_EFFECT_IMGS = {
-  attack:      "assets/images/stat_effects/stat_effects_atk.PNG",
-  defense:     "assets/images/stat_effects/stat_effects_def.PNG",
-  speed:       "assets/images/stat_effects/stat_effects_speed.PNG",
-  accuracy:    "assets/images/stat_effects/stat_effects_accuracy.PNG",
-  spAttack:    "assets/images/stat_effects/stat_effects_spe_atk.PNG",
-  spDefense:   "assets/images/stat_effects/stat_effects_spe_def.PNG",
-  evasiveness: "assets/images/stat_effects/stat_effects_evasiveness.PNG",
-  mix:         "assets/images/stat_effects/stat_effects_mix.PNG"
-};
-
 function renderMoveButtons() {
   const movesDiv = document.getElementById("battle-moves");
   movesDiv.innerHTML = "";
@@ -1289,60 +1277,29 @@ async function animateProjectile(attackerEl, defenderEl, color) {
   proj.remove();
 }
 
-// Animation stat Gen III — images individuelles, 100% CSS, compatible file://
+// Animation stat Gen III — filtres CSS sur le sprite (compatible file://)
 async function animateStatEffect(targetEl, isBuff, effect) {
   try {
-    const statName = STAT_EFFECT_MAP[effect] || "attack";
-    const imgUrl = STAT_EFFECT_IMGS[statName];
-    if (!imgUrl) return;
-
     const spriteImg = targetEl.querySelector(".sprite-img");
     if (!spriteImg) return;
 
-    // Convertir le sprite en data URL pour contourner CORS en file://
-    let maskUrl = spriteImg.src;
-    try {
-      const cvs = document.createElement("canvas");
-      cvs.width = spriteImg.naturalWidth || spriteImg.width;
-      cvs.height = spriteImg.naturalHeight || spriteImg.height;
-      cvs.getContext("2d").drawImage(spriteImg, 0, 0);
-      maskUrl = cvs.toDataURL();
-    } catch (e) { /* fallback sur src directe */ }
+    const baseFilter = spriteImg.style.filter || "none";
+    const flashFilter = isBuff
+      ? "brightness(1.8) saturate(2) hue-rotate(60deg)"   // doré (buff)
+      : "brightness(0.6) saturate(2) hue-rotate(-30deg)";  // rouge (debuff)
 
-    // Copier le transform du sprite (offset + scale) pour aligner l'overlay
-    const spriteTransform = spriteImg.style.transform || "";
-
-    const overlay = document.createElement("div");
-    overlay.className = "stat-overlay";
-    overlay.style.cssText = `
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      background-image: url("${imgUrl}");
-      background-size: 100% auto;
-      background-repeat: repeat-y;
-      mask-image: url("${maskUrl}");
-      -webkit-mask-image: url("${maskUrl}");
-      mask-size: contain;
-      -webkit-mask-size: contain;
-      mask-repeat: no-repeat;
-      -webkit-mask-repeat: no-repeat;
-      mask-position: center;
-      -webkit-mask-position: center;
-      mix-blend-mode: screen;
-      z-index: 15; pointer-events: none; image-rendering: pixelated;
-      transform: ${spriteTransform};
-    `;
-    targetEl.appendChild(overlay);
-
-    // Scroll vertical : monte (buff) ou descend (debuff)
-    const scrollDist = isBuff ? -200 : 200;
-    const anim = overlay.animate([
-      { backgroundPositionY: "0px", opacity: 0 },
-      { backgroundPositionY: "0px", opacity: 0.7, offset: 0.1 },
-      { backgroundPositionY: scrollDist + "px", opacity: 0.7, offset: 0.85 },
-      { backgroundPositionY: scrollDist + "px", opacity: 0 }
-    ], { duration: 2000, easing: "linear" });
+    // 3 flashs successifs
+    const anim = spriteImg.animate([
+      { filter: baseFilter },
+      { filter: flashFilter, offset: 0.1 },
+      { filter: baseFilter, offset: 0.23 },
+      { filter: flashFilter, offset: 0.33 },
+      { filter: baseFilter, offset: 0.46 },
+      { filter: flashFilter, offset: 0.56 },
+      { filter: baseFilter, offset: 0.7 },
+      { filter: baseFilter }
+    ], { duration: 1200, easing: "ease-in-out" });
     await anim.finished;
-    overlay.remove();
   } catch (err) {
     console.error("animateStatEffect error:", err);
   }
