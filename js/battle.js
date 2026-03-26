@@ -1826,8 +1826,14 @@ function showResult(won) {
 // Gestionnaire d'équipe entre combats (swap + items)
 function openTeamManager() {
   const panel = document.getElementById("battle-team-panel");
+  const originalParent = panel.parentElement;
   const prompt = panel.querySelector(".team-prompt");
   const cancelBtn = panel.querySelector(".team-cancel-btn");
+
+  // Déplacer dans le body pour contourner display:none du battle-screen
+  document.body.appendChild(panel);
+  panel.style.position = "fixed";
+  panel.style.inset = "0";
 
   let selectedIndex = -1;
   prompt.textContent = t("manageTeamPrompt");
@@ -1881,6 +1887,10 @@ function openTeamManager() {
   cancelBtn.onclick = () => {
     panel.classList.add("hidden");
     panel.style.zIndex = "";
+    panel.style.position = "";
+    panel.style.inset = "";
+    // Remettre dans le battle-screen
+    originalParent.appendChild(panel);
     for (let i = 0; i < 6; i++) {
       document.getElementById("team-slot-" + i).onclick = null;
     }
