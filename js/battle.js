@@ -1320,20 +1320,29 @@ async function animateStatEffect(targetEl, isBuff, effect) {
     targetEl.appendChild(canvas);
     const ctx = canvas.getContext("2d");
 
-    // Position exacte du sprite via getBoundingClientRect (pas de parsing manual)
-    const spriteRect = spriteImg.getBoundingClientRect();
-    const containerRect = targetEl.getBoundingClientRect();
-    const drawX = spriteRect.left - containerRect.left;
-    const drawY = spriteRect.top - containerRect.top;
-    const drawW = spriteRect.width;
-    const drawH = spriteRect.height;
+    // Reproduire object-fit: contain (centrage + ratio d'aspect)
+    const natW = spriteImg.naturalWidth || 64;
+    const natH = spriteImg.naturalHeight || 64;
     const containerW = canvas.width;
     const containerH = canvas.height;
+    const fitRatio = Math.min(containerW / natW, containerH / natH);
+    const fitW = natW * fitRatio;
+    const fitH = natH * fitRatio;
+    const fitX = (containerW - fitW) / 2;
+    const fitY = (containerH - fitH) / 2;
+
+    // Parser le CSS transform du sprite (translate + scale)
+    const transformStr = spriteImg.style.transform || "";
+    let tx = 0, ty = 0, sc = 1;
+    const tMatch = transformStr.match(/translate\(([^,]+),\s*([^)]+)\)/);
+    if (tMatch) { tx = parseFloat(tMatch[1]) || 0; ty = parseFloat(tMatch[2]) || 0; }
+    const sMatch = transformStr.match(/scale\(([^)]+)\)/);
+    if (sMatch) sc = parseFloat(sMatch[1]) || 1;
 
     // Paramètres d'animation
     const duration = 2000;
     const scrollDist = isBuff ? -200 : 200;
-    const patternTileH = patternImg.height * (drawW / patternImg.width);
+    const patternTileH = patternImg.height * (fitW / patternImg.width);
     const startTime = performance.now();
 
     await new Promise(resolve => {
@@ -1353,22 +1362,30 @@ async function animateStatEffect(targetEl, isBuff, effect) {
         ctx.globalAlpha = opacity;
         ctx.globalCompositeOperation = "source-over";
 
+        // Appliquer le même CSS transform au canvas
+        ctx.save();
+        ctx.translate(containerW / 2, containerH / 2);
+        ctx.translate(tx, ty);
+        ctx.scale(sc, sc);
+        ctx.translate(-containerW / 2, -containerH / 2);
+
         // Dessiner le pattern en tuiles verticales avec scroll
-        const tileCount = Math.ceil(drawH / patternTileH) + 2;
+        const tileCount = Math.ceil(fitH / patternTileH) + 2;
         const baseY = scrollY % patternTileH;
         ctx.save();
         ctx.beginPath();
-        ctx.rect(drawX, drawY, drawW, drawH);
+        ctx.rect(fitX, fitY, fitW, fitH);
         ctx.clip();
         for (let i = -1; i < tileCount; i++) {
-          ctx.drawImage(patternImg, drawX, drawY + baseY + i * patternTileH, drawW, patternTileH);
+          ctx.drawImage(patternImg, fitX, fitY + baseY + i * patternTileH, fitW, patternTileH);
         }
         ctx.restore();
 
         // Découper à la silhouette du sprite (destination-in)
         ctx.globalCompositeOperation = "destination-in";
-        ctx.drawImage(spriteImg, drawX, drawY, drawW, drawH);
-        ctx.globalCompositeOperation = "source-over";
+        ctx.drawImage(spriteImg, fitX, fitY, fitW, fitH);
+
+        ctx.restore();
         ctx.globalAlpha = 1;
 
         if (t < 1) requestAnimationFrame(frame);
